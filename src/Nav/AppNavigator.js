@@ -8,6 +8,7 @@ import CrearCuenta from '../screens/CrearAcc';
 import Main from '../screens/Main';
 import Cuenta from '../screens/Cuenta';
 import Biblioteca from '../screens/Biblioteca';
+import Prestamos from '../screens/Prestamos';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,9 @@ const AppNavigator = () => {
         <Stack.Screen name="IniciarAcc" component={IniciarSesion} options={{ title: 'Iniciar Sesion' }} />
         <Stack.Screen name="CrearAcc" component={CrearCuenta} options={{ title: 'Crear Cuenta' }} />
         <Stack.Screen name="Main" component={Main} options={{ title: 'Main' }} />
+        <Stack.Screen name="Cuenta" component={Cuenta} options={{ title: 'Cuenta' }} />
+        <Stack.Screen name="Biblioteca" component={Biblioteca} options={{ title: 'Biblioteca' }} />
+        <Stack.Screen name="Prestamos" component={Prestamos} options={{ title: 'Prestamos' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -29,6 +29,11 @@ const Main = ({ navigation }) => {
                     </thead>
                 </table>
             </View>
+            <View>
+              <Button title="Ir a Biblioteca" onPress={() => navigation.navigate('Biblioteca')} />
+              <Button title="Ir a Prestamos" onPress={() => navigation.navigate('Prestamos')} />
+              <Button title="Ir a Cuenta" onPress={() => navigation.navigate('Cuenta')} />
+            </View>
         </View>
     );
 };
