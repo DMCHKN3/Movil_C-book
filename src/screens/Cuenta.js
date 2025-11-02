@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const Cuenta = ({ navigation }) => {
   return (
@@ -28,9 +29,19 @@ const Cuenta = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      <View style={{ padding: 16 }}>
-        <Button title="Regresar al Inicio" onPress={() => navigation.navigate('Main')} />
-      </View>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Main')}
+        style={styles.buttonContainer}
+      >
+        <LinearGradient
+          colors={['#5D2D58', '#C35EB9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientButton}
+        >
+          <Text style={styles.buttonText}>Regresar al Menu Principal</Text>
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -107,6 +118,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000000',
     marginBottom: 10,
+    fontFamily: 'Segoe UI',
+  },
+  buttonContainer: {
+    width: '80%',
+    alignSelf: 'center',
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  gradientButton: {
+    borderRadius: 20,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '350',
     fontFamily: 'Segoe UI',
   },
 });
