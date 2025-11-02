@@ -1,24 +1,81 @@
-// src/screens/HomeScreen.js
-import React from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
-import { CheckBox } from 'react-native-web';
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet 
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient'; // Si usas Expo
 
 const IniciarSesion = ({ navigation }) => {
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>INICIAR SESION</Text>
-      <br></br>
-      <form>
-        <label>Usuario: <input type='text' placeholder='Ingrese su boleta: '></input></label><br></br>
-        <label>Contraseña: <input type='text' placeholder='Ingrese su contraseña: '></input></label><br></br>
-        <text>Mostrar Contraseña: </text><CheckBox value=''></CheckBox>
-        <text>Recordar Usuario: </text><CheckBox value=''></CheckBox>
-        <label>Captcha1</label> <br></br>
-        <label>Captcha2</label><br></br>
-        <Button title='Iniciar Sesión' type='submit' onPress={() => navigation.navigate('Main')}></Button>
-      </form><br></br>
-      <text>¿No tienes una cuenta?</text><br></br>
-      <Button title="Crear Cuenta" onPress={() => navigation.navigate('CrearAcc')} />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Usuario"
+        placeholderTextColor="#999"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Contraseña"
+        placeholderTextColor="#999"
+        secureTextEntry={!mostrarContrasena}
+      />
+
+      <TouchableOpacity 
+        style={styles.checkboxContainer}
+        onPress={() => setMostrarContrasena(!mostrarContrasena)}
+      >
+        <View style={styles.checkbox}>
+          {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+        </View>
+        <Text style={styles.checkboxLabel}>Mostrar contraseña</Text>
+      </TouchableOpacity>
+
+      <View style={styles.captchaBox}>
+        <Text style={styles.captchaText}>CAPTCHA</Text>
+      </View>
+
+      <TextInput
+        style={styles.captchaInput}
+        placeholder="Captcha"
+        placeholderTextColor="#999"
+      />
+
+      {/* Botón Inicio de Sesión */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Main')}
+        style={styles.buttonContainer}
+      >
+        <LinearGradient
+          colors={['#5D2D58', '#C35EB9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientButton}
+        >
+          <Text style={styles.buttonText}>INICIO DE SESIÓN</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => navigation.navigate('CrearAcc')}
+        style={styles.buttonContainer}
+      >
+        <LinearGradient
+          colors={['#5D2D58', '#C35EB9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientButton}
+        >
+          <Text style={styles.buttonText}>CREAR CUENTA</Text>
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -26,13 +83,103 @@ const IniciarSesion = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#111625', // Fondo sólido
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    paddingHorizontal: 30,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold'
-  }
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 40,
+    fontFamily: 'Segoe UI',
+  },
+  input: {
+    width: '100%',
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#F2D9E3',
+    backgroundColor: '#111625',
+    paddingHorizontal: 20,
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 15,
+    fontFamily: 'Abel',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: 5,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderColor: '#5D8BF4',
+    backgroundColor: '#5D8BF4',
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  captchaBox: {
+    width: '100%',
+    height: 80,
+    borderRadius: 15,
+    backgroundColor: '#D9D9D9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  captchaText: {
+    color: '#000000',
+    fontSize: 13,
+    fontWeight: '900',
+    fontFamily: 'Segoe UI',
+    lineHeight: 16,
+  },
+  captchaInput: {
+    width: '60%',
+    height: 45,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#F2D9E3',
+    backgroundColor: '#111625',
+    paddingHorizontal: 20,
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 25,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    width: '100%',
+    marginBottom: 15,
+  },
+  gradientButton: {
+    borderRadius: 20,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '350',
+    fontFamily: 'Segoe UI',
+  },
 });
 
 export default IniciarSesion;
