@@ -1,14 +1,16 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet 
-} from 'react-native';
+import React, { use, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { validarform } from '../validaciones/validacionForm';
 
 const CrearCuenta = ({ navigation }) => {
+const [user, setUser] = useState ('');
+const [contra, setContra] = useState('');
+const [repcontra,setRepContra] = useState('');
+const [nombre, setNombre] = useState('');
+const [apellidos, setApellidos] = useState('');
+const [correo, setCorreo] = useState('');
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>CREA TU CUENTA</Text>
@@ -17,6 +19,8 @@ const CrearCuenta = ({ navigation }) => {
         style={styles.input}
         placeholder="Número de boleta"
         placeholderTextColor="#999"
+        value= {user}
+        onChangeText={setUser}
       />
 
       <View style={styles.rowInputs}>
@@ -24,11 +28,15 @@ const CrearCuenta = ({ navigation }) => {
           style={styles.inputHalf}
           placeholder="Nombre(s)"
           placeholderTextColor="#999"
+          value= {nombre}
+        onChangeText={setNombre}
         />
         <TextInput
           style={styles.inputHalf}
           placeholder="Apellido(s)"
           placeholderTextColor="#999"
+          value= {apellidos}
+        onChangeText={setApellidos}
         />
       </View>
 
@@ -37,6 +45,8 @@ const CrearCuenta = ({ navigation }) => {
         placeholder="Correo Electronico"
         placeholderTextColor="#999"
         keyboardType="email-address"
+        value= {correo}
+        onChangeText={setCorreo}
       />
 
       <TextInput
@@ -44,6 +54,8 @@ const CrearCuenta = ({ navigation }) => {
         placeholder="Contraseña"
         placeholderTextColor="#999"
         secureTextEntry={true}
+        value= {contra}
+        onChangeText={setContra}
       />
 
       <TextInput
@@ -51,6 +63,8 @@ const CrearCuenta = ({ navigation }) => {
         placeholder="Confirmar Contraseña"
         placeholderTextColor="#999"
         secureTextEntry={true}
+        value= {repcontra}
+        onChangeText={setRepContra}
       />
 
       <TouchableOpacity
@@ -63,7 +77,7 @@ const CrearCuenta = ({ navigation }) => {
           end={{ x: 1, y: 0 }}
           style={styles.gradientButton}
         >
-          <Text style={styles.buttonText}>INICIO DE SESIÓN</Text>
+          <Text style={styles.buttonText}>Crear Cuenta</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>

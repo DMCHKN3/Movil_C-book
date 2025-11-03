@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet 
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; // Si usas Expo
+import { validarLogin } from '../validaciones/validacionInicioss';
 
 const IniciarSesion = ({ navigation }) => {
+  const [user,setUser] = useState('');
+  const [contra,setContra] = useState('');
+  const [LoggedIn, setLoggedIn] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+
+
+  const handleLogin = () => {
+    validarLogin(user,contra, setLoggedIn);
+  };
 
   return (
     <View style={styles.container}>
@@ -19,6 +22,8 @@ const IniciarSesion = ({ navigation }) => {
         style={styles.input}
         placeholder="Usuario"
         placeholderTextColor="#999"
+        value={user}
+        onChangeText={setUser}
       />
 
       <TextInput
@@ -26,6 +31,8 @@ const IniciarSesion = ({ navigation }) => {
         placeholder="Contraseña"
         placeholderTextColor="#999"
         secureTextEntry={!mostrarContrasena}
+        value={contra}
+        onChangeText={setContra}
       />
 
       <TouchableOpacity 
@@ -50,8 +57,9 @@ const IniciarSesion = ({ navigation }) => {
 
       {/* Botón Inicio de Sesión */}
       <TouchableOpacity
-        onPress={() => navigation.navigate('Main')}
+        onPress={handleLogin}
         style={styles.buttonContainer}
+        
       >
         <LinearGradient
           colors={['#5D2D58', '#C35EB9']}
