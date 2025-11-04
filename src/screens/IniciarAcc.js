@@ -6,12 +6,17 @@ import { validarLogin } from '../validaciones/validacionInicioss';
 const IniciarSesion = ({ navigation }) => {
   const [user,setUser] = useState('');
   const [contra,setContra] = useState('');
-  const [LoggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
 
 
   const handleLogin = () => {
-    validarLogin(user,contra, setLoggedIn);
+    const pasa = validarLogin(user,contra, setLoggedIn);
+    if (pasa){
+      setUser('');
+      setContra('');
+      navigation.navigate('Main')
+    }
   };
 
   return (
@@ -67,7 +72,7 @@ const IniciarSesion = ({ navigation }) => {
           end={{ x: 1, y: 0 }}
           style={styles.gradientButton}
         >
-          <Text style={styles.buttonText}>INICIO DE SESIÓN</Text>
+          <Text style={styles.buttonText}>INICIAR SESIÓN</Text>
         </LinearGradient>
       </TouchableOpacity>
 

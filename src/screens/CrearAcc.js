@@ -10,6 +10,20 @@ const [repcontra,setRepContra] = useState('');
 const [nombre, setNombre] = useState('');
 const [apellidos, setApellidos] = useState('');
 const [correo, setCorreo] = useState('');
+const [crearc, setCrearc] = useState(false);
+
+const handleCrearCuenta = () => {
+  const pasa = validarform(user, contra, repcontra, nombre, apellidos, correo);
+  if (pasa){
+    setUser('');
+    setContra('');
+    setRepContra('');
+    setNombre('');
+    setApellidos('');
+    setCorreo('');
+    setCrearc(true);
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -68,7 +82,7 @@ const [correo, setCorreo] = useState('');
       />
 
       <TouchableOpacity
-        onPress={() => navigation.navigate('IniciarAcc')}
+        onPress={handleCrearCuenta}
         style={styles.buttonContainer}
       >
         <LinearGradient
