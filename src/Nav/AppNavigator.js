@@ -15,13 +15,13 @@ const Stack = createNativeStackNavigator();
 const AppNavigator = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="IniciarAcc">
-        <Stack.Screen name="IniciarAcc" component={IniciarSesion} options={{ title: 'Iniciar Sesion' }} />
-        <Stack.Screen name="CrearAcc" component={CrearCuenta} options={{ title: 'Crear Cuenta' }} />
-        <Stack.Screen name="Main" component={Main} options={{ title: 'Main' }} />
-        <Stack.Screen name="Cuenta" component={Cuenta} options={{ title: 'Cuenta' }} />
-        <Stack.Screen name="Biblioteca" component={Biblioteca} options={{ title: 'Biblioteca' }} />
-        <Stack.Screen name="Prestamos" component={Prestamos} options={{ title: 'Prestamos' }} />
+      <Stack.Navigator initialRouteName="IniciarAcc" screenOptions={{headerShown: false,}}>
+        <Stack.Screen name="IniciarAcc" component={IniciarSesion} />
+        <Stack.Screen name="CrearAcc" component={CrearCuenta} />
+        <Stack.Screen name="Main" component={Main} />
+        <Stack.Screen name="Cuenta" component={Cuenta} />
+        <Stack.Screen name="Biblioteca" component={Biblioteca} />
+        <Stack.Screen name="Prestamos" component={Prestamos} />
       </Stack.Navigator>
     </NavigationContainer>
   );
