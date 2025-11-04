@@ -94,6 +94,19 @@ const handleCrearCuenta = () => {
           <Text style={styles.buttonText}>Crear Cuenta</Text>
         </LinearGradient>
       </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('IniciarAcc')}
+        style={styles.buttonContainer}
+      >
+        <LinearGradient
+          colors={['#5D2D58', '#C35EB9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientButton}
+        >
+          <Text style={styles.buttonText}>Volver a Iniciar Sesión</Text>
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 };
