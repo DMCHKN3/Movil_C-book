@@ -6,14 +6,6 @@ export const validarLogin = (user,contra,setLoggedIn) => {
 
     const validUser = '2024090412';
     const validPass = 'Pep1t0_perez';
-    if (user === validUser && contra === validPass) {
-      Alert.alert('Correcto emntra jeje');
-      setLoggedIn(true);
-      return true;
-    } else {
-      Alert.alert('Error', 'Usuario o contraseña incorrectos');
-      return false;
-    }
     
     if (!user || !contra) {
         Alert.alert('Error', 'Por favor complete todos los campos');
@@ -30,5 +22,14 @@ export const validarLogin = (user,contra,setLoggedIn) => {
         return false;
     }
 
+    if (user === validUser && contra === validPass) {
+      Alert.alert('Correcto emntra jeje');
+      setLoggedIn(true);
+      return true;
+    } else {
+      Alert.alert('Error', 'Usuario o contraseña incorrectos');
+      return false;
+    }
+    
     
 };
