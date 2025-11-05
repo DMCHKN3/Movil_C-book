@@ -23,6 +23,7 @@ export const validarform = (user, contra, repcontra, nombre, apellidos, correo) 
     }
     if (!resRepContra.test(repcontra)) {
         Alert.alert('Error', 'Favor de introducir la misma contraseña')
+        return false;
     }
 
     if (!resNombre.test(nombre)) {
