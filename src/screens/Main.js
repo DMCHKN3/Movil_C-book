@@ -34,12 +34,12 @@ const Main = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.caja, { width: cardWidth, height: cardHeight, marginRight: 16 }]}> 
-            <Text style={[styles.cajaTexto, { fontSize: Math.round(28 * scale) }]} allowFontScaling>
+            <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
               SOL 2
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.caja, { width: cardWidth, height: cardHeight, marginRight: 16 }]}> 
-            <Text style={[styles.cajaTexto, { fontSize: Math.round(28 * scale) }]} allowFontScaling>
+            <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
               SOL 3
             </Text>
           </TouchableOpacity>
