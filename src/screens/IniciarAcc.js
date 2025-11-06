@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; // Si usas Expo
 import { validarLogin } from '../validaciones/validacionInicioss';
 
@@ -20,7 +20,11 @@ const IniciarSesion = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require('../../assets/fondo.png')}
+      style={styles.container}
+      resizeMode="cover"
+    >
       <Text style={styles.title}>INICIAR SESION</Text>
 
       <TextInput
@@ -64,7 +68,6 @@ const IniciarSesion = ({ navigation }) => {
       <TouchableOpacity
         onPress={handleLogin}
         style={styles.buttonContainer}
-        
       >
         <LinearGradient
           colors={['#5D2D58', '#C35EB9']}
@@ -89,14 +92,15 @@ const IniciarSesion = ({ navigation }) => {
           <Text style={styles.buttonText}>CREAR CUENTA</Text>
         </LinearGradient>
       </TouchableOpacity>
-    </View>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111625', // Fondo sólido
+    // backgroundColor opcional como fallback
+    backgroundColor: '#111625',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 30,
