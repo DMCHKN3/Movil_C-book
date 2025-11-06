@@ -1,16 +1,18 @@
-import React, { use, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { validarform } from '../validaciones/validacionForm';
 
 const CrearCuenta = ({ navigation }) => {
-const [user, setUser] = useState ('');
-const [contra, setContra] = useState('');
-const [repcontra,setRepContra] = useState('');
-const [nombre, setNombre] = useState('');
-const [apellidos, setApellidos] = useState('');
-const [correo, setCorreo] = useState('');
-const [crearc, setCrearc] = useState(false);
+  const { s, vs, text } = useScale();
+  const [user, setUser] = useState ('');
+  const [contra, setContra] = useState('');
+  const [repcontra,setRepContra] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [apellidos, setApellidos] = useState('');
+  const [correo, setCorreo] = useState('');
+  const [crearc, setCrearc] = useState(false);
 
 const handleCrearCuenta = () => {
   const pasa = validarform(user, contra, repcontra, nombre, apellidos, correo);
@@ -26,11 +28,11 @@ const handleCrearCuenta = () => {
 };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>CREA TU CUENTA</Text>
+    <View style={[styles.container, { paddingHorizontal: s(30) }] }>
+      <Text style={[styles.title, { fontSize: text(24), marginBottom: vs(40) }]}>CREA TU CUENTA</Text>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Número de boleta"
         placeholderTextColor="#999"
         value= {user}
@@ -39,14 +41,14 @@ const handleCrearCuenta = () => {
 
       <View style={styles.rowInputs}>
         <TextInput
-          style={styles.inputHalf}
+          style={[styles.inputHalf, { height: vs(50), fontSize: text(16) }]}
           placeholder="Nombre(s)"
           placeholderTextColor="#999"
           value= {nombre}
         onChangeText={setNombre}
         />
         <TextInput
-          style={styles.inputHalf}
+          style={[styles.inputHalf, { height: vs(50), fontSize: text(16) }]}
           placeholder="Apellido(s)"
           placeholderTextColor="#999"
           value= {apellidos}
@@ -55,7 +57,7 @@ const handleCrearCuenta = () => {
       </View>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Correo Electronico"
         placeholderTextColor="#999"
         keyboardType="email-address"
@@ -64,7 +66,7 @@ const handleCrearCuenta = () => {
       />
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Contraseña"
         placeholderTextColor="#999"
         secureTextEntry={true}
@@ -73,7 +75,7 @@ const handleCrearCuenta = () => {
       />
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Confirmar Contraseña"
         placeholderTextColor="#999"
         secureTextEntry={true}

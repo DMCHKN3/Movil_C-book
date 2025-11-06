@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient'; // Si usas Expo
 import { validarLogin } from '../validaciones/validacionInicioss';
 
@@ -8,6 +9,7 @@ const IniciarSesion = ({ navigation }) => {
   const [contra,setContra] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const { s, vs, ms, text } = useScale();
 
 
   const handleLogin = () => {
@@ -22,13 +24,13 @@ const IniciarSesion = ({ navigation }) => {
   return (
     <ImageBackground
       source={require('../../assets/fondo.png')}
-      style={styles.container}
+      style={[styles.container, { paddingHorizontal: s(30) }]}
       resizeMode="cover"
     >
-      <Text style={styles.title}>INICIAR SESION</Text>
+      <Text style={[styles.title, { fontSize: text(24), marginBottom: vs(40) }]}>INICIAR SESION</Text>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Usuario"
         placeholderTextColor="#999"
         value={user}
@@ -36,7 +38,7 @@ const IniciarSesion = ({ navigation }) => {
       />
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Contraseña"
         placeholderTextColor="#999"
         secureTextEntry={!mostrarContrasena}
@@ -54,12 +56,12 @@ const IniciarSesion = ({ navigation }) => {
         <Text style={styles.checkboxLabel}>Mostrar contraseña</Text>
       </TouchableOpacity>
 
-      <View style={styles.captchaBox}>
-        <Text style={styles.captchaText}>CAPTCHA</Text>
+      <View style={[styles.captchaBox, { height: vs(80) }]}> 
+        <Text style={[styles.captchaText, { fontSize: text(13) }]}>CAPTCHA</Text>
       </View>
 
       <TextInput
-        style={styles.captchaInput}
+        style={[styles.captchaInput, { height: vs(45), fontSize: text(16) }]}
         placeholder="Captcha"
         placeholderTextColor="#999"
       />
@@ -69,28 +71,28 @@ const IniciarSesion = ({ navigation }) => {
         onPress={handleLogin}
         style={styles.buttonContainer}
       >
-        <LinearGradient
-          colors={['#5D2D58', '#C35EB9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientButton}
-        >
-          <Text style={styles.buttonText}>INICIAR SESIÓN</Text>
-        </LinearGradient>
+          <LinearGradient
+            colors={['#5D2D58', '#C35EB9']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradientButton}
+          >
+            <Text style={[styles.buttonText, { fontSize: text(16) }]}>INICIAR SESIÓN</Text>
+          </LinearGradient>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate('CrearAcc')}
         style={styles.buttonContainer}
       >
-        <LinearGradient
-          colors={['#5D2D58', '#C35EB9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientButton}
-        >
-          <Text style={styles.buttonText}>CREAR CUENTA</Text>
-        </LinearGradient>
+          <LinearGradient
+            colors={['#5D2D58', '#C35EB9']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradientButton}
+          >
+            <Text style={[styles.buttonText, { fontSize: text(16) }]}>CREAR CUENTA</Text>
+          </LinearGradient>
       </TouchableOpacity>
     </ImageBackground>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const Prestamos = ({ navigation }) => {
@@ -8,10 +9,12 @@ const Prestamos = ({ navigation }) => {
     { libro: '1984', solicitud: '05/01/2023', devolucion: '10/01/2023', dias: 5 },
   ];
 
+  const { s, vs, text } = useScale();
+
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Prestamos Actuales</Text>
+      <View style={[styles.content, { paddingHorizontal: s(20) }]}>
+        <Text style={[styles.title, { fontSize: text(28), marginBottom: vs(24) }]}>Prestamos Actuales</Text>
 
         <View style={styles.table}>
           <View style={styles.tableRow}>
@@ -23,10 +26,10 @@ const Prestamos = ({ navigation }) => {
 
           {prestamos.map((prestamo, index) => (
             <View key={index} style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.col1]}>{prestamo.libro}</Text>
-              <Text style={[styles.tableCell, styles.col2]}>{prestamo.solicitud}</Text>
-              <Text style={[styles.tableCell, styles.col3]}>{prestamo.devolucion}</Text>
-              <Text style={[styles.tableCell, styles.col4]}>{prestamo.dias}</Text>
+                <Text style={[styles.tableCell, styles.col1, { fontSize: text(12) }]}>{prestamo.libro}</Text>
+                <Text style={[styles.tableCell, styles.col2, { fontSize: text(12) }]}>{prestamo.solicitud}</Text>
+                <Text style={[styles.tableCell, styles.col3, { fontSize: text(12) }]}>{prestamo.devolucion}</Text>
+                <Text style={[styles.tableCell, styles.col4, { fontSize: text(12) }]}>{prestamo.dias}</Text>
             </View>
           ))}
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const Biblioteca = ({ navigation }) => {
@@ -10,10 +11,12 @@ const Biblioteca = ({ navigation }) => {
     { nombre: 'Don Juan Tenorio', enBiblioteca: 12, enPrestamo: 1 },
   ];
 
+  const { s, vs, text } = useScale();
+
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Libros Disponibles</Text>
+      <View style={[styles.content, { paddingHorizontal: s(20) }]}>
+        <Text style={[styles.title, { fontSize: text(28), marginBottom: vs(24) }]}>Libros Disponibles</Text>
 
         <View style={styles.table}>
           <View style={styles.tableRow}>
@@ -24,9 +27,9 @@ const Biblioteca = ({ navigation }) => {
 
           {libros.map((libro, index) => (
             <View key={index} style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.col1]}>{libro.nombre}</Text>
-              <Text style={[styles.tableCell, styles.col2]}>{libro.enBiblioteca}</Text>
-              <Text style={[styles.tableCell, styles.col3]}>{libro.enPrestamo}</Text>
+                <Text style={[styles.tableCell, styles.col1, { fontSize: text(12) }]}>{libro.nombre}</Text>
+                <Text style={[styles.tableCell, styles.col2, { fontSize: text(12) }]}>{libro.enBiblioteca}</Text>
+                <Text style={[styles.tableCell, styles.col3, { fontSize: text(12) }]}>{libro.enPrestamo}</Text>
             </View>
           ))}
 
