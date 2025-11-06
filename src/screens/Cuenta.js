@@ -8,7 +8,7 @@ const Cuenta = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: s(20) }] }>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: s(20) }]}>
         <Text style={[styles.title, { fontSize: text(28), marginBottom: vs(24) }]}>Datos Personales</Text>
 
         <View style={styles.card}>
@@ -29,22 +29,35 @@ const Cuenta = ({ navigation }) => {
             <Text style={[styles.label, { fontSize: text(16) }]}>CORREO</Text>
             <Text style={[styles.value, { fontSize: text(16) }]}>texto@texto.com</Text>
           </View>
-        </View>
-      </ScrollView>
 
-      <TouchableOpacity
-        onPress={() => navigation.navigate('Main')}
-        style={styles.buttonContainer}
-      >
-        <LinearGradient
-          colors={['#5D2D58', '#C35EB9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientButton}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('IniciarAcc')}
+            style={styles.buttonContainer}
+          >
+            <LinearGradient
+              colors={['#5D2D58', '#C35EB9']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientButton}
+            >
+              <Text style={styles.buttonText}>Cerrar Sesión</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Main')}
+          style={styles.buttonContainer}
         >
-          <Text style={styles.buttonText}>Regresar al Menu Principal</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+          <LinearGradient
+            colors={['#5D2D58', '#C35EB9']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradientButton}
+          >
+            <Text style={styles.buttonText}>Regresar al Menu Principal</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 };
@@ -125,9 +138,8 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '80%',
-    alignSelf: 'center',
+    marginTop: 20,
     marginBottom: 20,
-    marginTop: 10,
   },
   gradientButton: {
     borderRadius: 20,
