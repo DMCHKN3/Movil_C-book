@@ -1,23 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
-import { LinearGradient } from 'expo-linear-gradient'; // Si usas Expo
-import { validarLogin } from '../validaciones/validacionInicioss';
+import { LinearGradient } from 'expo-linear-gradient';
+import { validarLoginConBD } from '../validaciones/validacionInicioss';
 
 const IniciarSesion = ({ navigation }) => {
-  const [user,setUser] = useState('');
-  const [contra,setContra] = useState('');
+  const [user, setUser] = useState('');
+  const [contra, setContra] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { s, vs, ms, text } = useScale();
 
 
-  const handleLogin = () => {
-    const pasa = validarLogin(user,contra, setLoggedIn);
-    if (pasa){
-      setUser('');
-      setContra('');
-      navigation.navigate('Main')
+  const handleLogin = async () => {
+    if (isLoading) return; // Prevenir múltiples clicks
+    
+    setIsLoading(true);
+    
+    try {
+      const resultado = await validarLoginConBD(user, contra);
+      
+      if (resultado.ok) {
+        setLoggedIn(true);
+        Alert.alert(
+          'Éxito',
+          'Sesión iniciada correctamente',
+          [{
+            text: 'OK',
+            onPress: () => {
+              setUser('');
+              setContra('');
+              navigation.navigate('Main');
+            }
+          }]
+        );
+      }
+      // Los errores ya se muestran en validarLoginConBD
+    } catch (error) {
+      console.error('Error en handleLogin:', error);
+      Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -69,15 +93,20 @@ const IniciarSesion = ({ navigation }) => {
       {/* Botón Inicio de Sesión */}
       <TouchableOpacity
         onPress={handleLogin}
-        style={styles.buttonContainer}
+        style={[styles.buttonContainer, isLoading && styles.buttonDisabled]}
+        disabled={isLoading}
       >
           <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
+            colors={isLoading ? ['#666', '#888'] : ['#5D2D58', '#C35EB9']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}
           >
-            <Text style={[styles.buttonText, { fontSize: text(16) }]}>INICIAR SESIÓN</Text>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={[styles.buttonText, { fontSize: text(16) }]}>INICIAR SESIÓN</Text>
+            )}
           </LinearGradient>
       </TouchableOpacity>
 
@@ -186,6 +215,9 @@ const styles = StyleSheet.create({
   buttonContainer: {
     width: '100%',
     marginBottom: 15,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   gradientButton: {
     borderRadius: 20,
