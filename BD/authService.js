@@ -35,20 +35,39 @@ export async function crearUsuario({boleta, nombre, apellidos, correo, contra}) 
 
     console.log('Boleta verificada exitosamente');
 
-    // Crear usuario en Supabase Auth
-    const { data: signData, error: signError } = await supabase.auth.signUp({
-        email: correo, 
-        password: contra
-    });
+    // Verificar si el usuario ya existe
+    const { data: existingUser, error: checkError } = await supabase
+        .from('usuarios_web_movil')
+        .select('boleta')
+        .eq('boleta', parseInt(boleta))
+        .limit(1);
 
-    if (signError) {
-        console.error('Error en signUp:', signError);
-        return {ok: false, message: signError.message || 'Error al crear usuario', error: signError};
+    if (checkError) {
+        console.error('Error verificando usuario existente:', checkError);
+        return {ok: false, message: 'Error verificando usuario existente'};
     }
 
-    console.log('Usuario creado en Auth exitosamente');
+    if (existingUser && existingUser.length > 0) {
+        return {ok: false, message: 'Ya existe una cuenta con esta boleta'};
+    }
 
-    // Preparar datos para insertar
+    // Verificar si el correo ya existe
+    const { data: existingEmail, error: emailCheckError } = await supabase
+        .from('usuarios_web_movil')
+        .select('correo')
+        .eq('correo', correo)
+        .limit(1);
+
+    if (emailCheckError) {
+        console.error('Error verificando correo existente:', emailCheckError);
+        return {ok: false, message: 'Error verificando correo existente'};
+    }
+
+    if (existingEmail && existingEmail.length > 0) {
+        return {ok: false, message: 'Ya existe una cuenta con este correo electrónico'};
+    }
+
+    // Preparar datos para insertar (solo en la base de datos, sin Supabase Auth)
     const datosUsuario = {
         boleta: parseInt(boleta),
         correo: correo,
@@ -70,5 +89,51 @@ export async function crearUsuario({boleta, nombre, apellidos, correo, contra}) 
     }
 
     console.log('Usuario insertado exitosamente:', insertData);
-    return {ok: true, user: signData.user, perfil: insertData?.[0] || null};
+    return {ok: true, user: null, perfil: insertData?.[0] || null};
+}
+
+export async function iniciarSesion(boleta, password) {
+    console.log('Iniciando sesión para boleta:', boleta);
+    
+    try {
+        // Buscar el usuario en la tabla usuarios_web_movil
+        const { data: userData, error: userError } = await supabase
+            .from('usuarios_web_movil')
+            .select('*')
+            .eq('boleta', parseInt(boleta))
+            .limit(1);
+
+        if (userError) {
+            console.error('Error buscando usuario:', userError);
+            return { ok: false, message: 'Error al buscar usuario' };
+        }
+
+        if (!userData || userData.length === 0) {
+            console.log('Usuario no encontrado');
+            return { ok: false, message: 'Usuario no encontrado' };
+        }
+
+        const usuario = userData[0];
+        console.log('Usuario encontrado:', usuario);
+
+        // Verificar la contraseña (comparación directa ya que está almacenada en texto plano)
+        if (usuario.password !== password) {
+            console.log('Contraseña incorrecta');
+            return { ok: false, message: 'Contraseña incorrecta' };
+        }
+
+        // Autenticación exitosa solo con la base de datos
+        // No usamos Supabase Auth para evitar problemas de confirmación de email
+        console.log('Sesión iniciada exitosamente');
+        return { 
+            ok: true, 
+            user: null, // No necesitamos el objeto user de Supabase Auth
+            perfil: usuario,
+            message: 'Sesión iniciada exitosamente' 
+        };
+
+    } catch (error) {
+        console.error('Error en iniciarSesion:', error);
+        return { ok: false, message: 'Error inesperado al iniciar sesión' };
+    }
 }
