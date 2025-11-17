@@ -3,19 +3,27 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getSolicitudes } from '../../tablas/solicitudes';
+import { useUser } from '../context/UserContext';
 
 const Prestamos = ({ navigation }) => {
+  const { getUserBoleta, isAuthenticated } = useUser();
   const [prestamos, setPrestamos] = useState([]);
-  const [loading, setLoading] = useState(true); 
-  const userId = 1;
-
+  const [loading, setLoading] = useState(true);
   const { s, vs, text } = useScale();
+  
+  const registro_id = getUserBoleta();
 
   useEffect(() => {
     const fetchPrestamos = async () => {
+      if (!isAuthenticated() || !registro_id) {
+        console.warn('Usuario no autenticado o sin boleta');
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
-        const data = await getSolicitudes(userId);
+        const data = await getSolicitudes(registro_id);
         setPrestamos(data);
       } catch (error) {
         console.error('Error cargando préstamos:', error);
@@ -25,7 +33,24 @@ const Prestamos = ({ navigation }) => {
     };
 
     fetchPrestamos();
-  }, [userId]);
+  }, [registro_id]);
+
+  const handleRefresh = async () => {
+    if (!isAuthenticated() || !registro_id) {
+      console.warn('Usuario no autenticado o sin boleta');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const data = await getSolicitudes(registro_id);
+      setPrestamos(data);
+    } catch (error) {
+      console.error('Error recargando préstamos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -64,12 +89,35 @@ const Prestamos = ({ navigation }) => {
             </View>
           ))}
 
-          {prestamos.length === 0 && (
+          {!isAuthenticated() || !registro_id ? (
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>Debes iniciar sesión para ver tus préstamos</Text>
+            </View>
+          ) : prestamos.length === 0 && (
             <View style={styles.tableRow}>
               <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>No tienes préstamos activos</Text>
             </View>
           )}
         </View>
+
+        <TouchableOpacity
+          onPress={handleRefresh}
+          style={[styles.buttonContainer, { marginBottom: 15 }]}
+          disabled={loading}
+        >
+          <LinearGradient
+            colors={loading ? ['#666', '#888'] : ['#4A90E2', '#7BB3F0']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradientButton}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.buttonText}>🔄 Actualizar Solicitudes</Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => navigation.navigate('Main')}
