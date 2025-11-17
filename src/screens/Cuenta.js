@@ -1,10 +1,33 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getCuenta } from '../../tablas/cuenta';
 
 const Cuenta = ({ navigation }) => {
+  const [cuenta, setCuenta] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const userId = 1; 
+  
   const { s, vs, text } = useScale();
+
+  useEffect(() => {
+    const fetchCuenta = async () => {
+      try {
+        setLoading(true);
+        const data = await getCuenta(userId);
+        if (data && data.length > 0) {
+          setCuenta(data[0]); 
+        }
+      } catch (error) {
+        console.error('Error cargando cuenta:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCuenta();
+  }, [userId]);
 
   return (
     <View style={styles.container}>
@@ -21,13 +44,19 @@ const Cuenta = ({ navigation }) => {
 
           <View style={styles.infoContainer}>
             <Text style={[styles.label, { fontSize: text(16) }]}>NOMBRE</Text>
-            <Text style={[styles.value, { fontSize: text(16) }]}>Juan Perez Perez</Text>
+            <Text style={[styles.value, { fontSize: text(16) }]}>
+              {loading ? 'Cargando...' : `${cuenta?.nombre || 'N/A'} ${cuenta?.apellido || ''}`}
+            </Text>
 
             <Text style={[styles.label, { fontSize: text(16) }]}>BOLETA</Text>
-            <Text style={[styles.value, { fontSize: text(16) }]}>123456789</Text>
+            <Text style={[styles.value, { fontSize: text(16) }]}>
+              {loading ? 'Cargando...' : cuenta?.boleta || 'N/A'}
+            </Text>
 
             <Text style={[styles.label, { fontSize: text(16) }]}>CORREO</Text>
-            <Text style={[styles.value, { fontSize: text(16) }]}>texto@texto.com</Text>
+            <Text style={[styles.value, { fontSize: text(16) }]}>
+              {loading ? 'Cargando...' : cuenta?.correo || 'N/A'}
+            </Text>
           </View>
 
           <TouchableOpacity

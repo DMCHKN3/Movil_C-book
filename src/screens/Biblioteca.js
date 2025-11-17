@@ -1,17 +1,39 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getLibros } from '../../tablas/libros';
 
 const Biblioteca = ({ navigation }) => {
-  const libros = [
-    { nombre: 'El Quijote', enBiblioteca: 20, enPrestamo: 3 },
-    { nombre: '1984', enBiblioteca: 15, enPrestamo: 2 },
-    { nombre: 'Cien Años de Soledad', enBiblioteca: 18, enPrestamo: 5 },
-    { nombre: 'Don Juan Tenorio', enBiblioteca: 12, enPrestamo: 1 },
-  ];
+  const [libros, setLibros] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const { s, vs, text } = useScale();
+
+  useEffect(() => {
+    const fetchLibros = async () => {
+      try {
+        setLoading(true);
+        const data = await getLibros();
+        setLibros(data);
+      } catch (error) {
+        console.error('Error cargando libros:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLibros();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#C35EB9" />
+        <Text style={styles.loadingText}>Cargando libros...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -20,26 +42,30 @@ const Biblioteca = ({ navigation }) => {
 
         <View style={styles.table}>
           <View style={styles.tableRow}>
-            <Text style={[styles.tableHeader, styles.col1]}>Nombre del{'\n'}Libro</Text>
-            <Text style={[styles.tableHeader, styles.col2]}>Cantidad en{'\n'}Biblioteca</Text>
-            <Text style={[styles.tableHeader, styles.col3]}>Cantidad en{'\n'}Prestamo</Text>
+            <Text style={[styles.tableHeader, styles.column]}>ID</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Nombre del{'\n'}Libro</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Edición</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Editorial</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Tomo</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Disponibles</Text>
           </View>
 
           {libros.map((libro, index) => (
-            <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.col1, { fontSize: text(12) }]}>{libro.nombre}</Text>
-                <Text style={[styles.tableCell, styles.col2, { fontSize: text(12) }]}>{libro.enBiblioteca}</Text>
-                <Text style={[styles.tableCell, styles.col3, { fontSize: text(12) }]}>{libro.enPrestamo}</Text>
+            <View key={libro.id || index} style={styles.tableRow}>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.id}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.titulo || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.edicion || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.editorial || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.tomo || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.cantidad_disponible || 'N/A'}</Text>
             </View>
           ))}
 
-          {[...Array(2)].map((_, index) => (
-            <View key={`empty-${index}`} style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.col1]}></Text>
-              <Text style={[styles.tableCell, styles.col2]}></Text>
-              <Text style={[styles.tableCell, styles.col3]}></Text>
+          {libros.length === 0 && (
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>No hay libros disponibles</Text>
             </View>
-          ))}
+          )}
         </View>
 
         <TouchableOpacity
@@ -90,35 +116,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#555',
+    alignItems: 'center',
+    minHeight: 48,
+    paddingVertical: 6,
   },
   tableHeader: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     textAlign: 'center',
     backgroundColor: '#2A2A2A',
     fontFamily: 'Segoe UI',
+    flexWrap: 'wrap',
   },
   tableCell: {
     color: '#FFFFFF',
     fontSize: 12,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     textAlign: 'center',
     fontFamily: 'Segoe UI',
+    flexWrap: 'wrap',
+    flexShrink: 1,
   },
-  col1: {
-    flex: 2.5,
-    borderRightWidth: 1,
+  column: {
+    flex: 1.5,
     borderRightColor: '#555',
+    paddingHorizontal: 4,
   },
-  col2: {
-    flex: 2,
-    borderRightWidth: 1,
-    borderRightColor: '#555',
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  col3: {
-    flex: 2,
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 10,
+    fontSize: 16,
+    fontFamily: 'Segoe UI',
   },
   buttonContainer: {
     width: '80%',
