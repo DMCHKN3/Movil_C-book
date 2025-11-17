@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getCuenta } from '../../tablas/cuenta';
+import { getUsuario } from '../../tablas/cuenta';
+import { getDatos } from '../../tablas/cuenta';
 import { useUser } from '../context/UserContext';
 
 const Cuenta = ({ navigation }) => {
   const { logout, getUserBoleta } = useUser();
   const [cuenta, setCuenta] = useState(null);
+  const [datos, setDatos] = useState(null);
   const [loading, setLoading] = useState(true);
-  const userId = getUserBoleta() || 1; 
+  const boleta = getUserBoleta() || 1; 
   
   const { s, vs, text } = useScale();
 
@@ -17,7 +19,7 @@ const Cuenta = ({ navigation }) => {
     const fetchCuenta = async () => {
       try {
         setLoading(true);
-        const data = await getCuenta(userId);
+        const data = await getUsuario(boleta);
         if (data && data.length > 0) {
           setCuenta(data[0]); 
         }
@@ -28,8 +30,23 @@ const Cuenta = ({ navigation }) => {
       }
     };
 
+    const fetchDatos = async () => {
+      try {
+        setLoading(true);
+        const data = await getDatos(boleta);
+        if (data && data.length > 0) {
+          setDatos(prevDatos => ({ ...prevDatos, ...data[0] }));
+        }
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchCuenta();
-  }, [userId]);
+    fetchDatos();
+  }, [boleta]);
 
   return (
     <View style={styles.container}>
@@ -57,7 +74,7 @@ const Cuenta = ({ navigation }) => {
 
             <Text style={[styles.label, { fontSize: text(16) }]}>CORREO</Text>
             <Text style={[styles.value, { fontSize: text(16) }]}>
-              {loading ? 'Cargando...' : cuenta?.correo || 'N/A'}
+              {loading ? 'Cargando...' : datos?.correo || 'N/A'}
             </Text>
           </View>
 
