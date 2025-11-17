@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { validarLoginConBD } from '../validaciones/validacionInicioss';
@@ -11,6 +12,7 @@ const IniciarSesion = ({ navigation }) => {
   const [contra, setContra] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [mantenerSesion, setMantenerSesion] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { s, vs, ms, text } = useScale();
 
@@ -27,6 +29,20 @@ const IniciarSesion = ({ navigation }) => {
         setLoggedIn(true);
         // Guardar usuario en el contexto
         login(resultado.user, resultado.perfil);
+        
+        // Guardar sesión si está marcada la opción
+        if (mantenerSesion) {
+          try {
+            await AsyncStorage.setItem('userSession', JSON.stringify({
+              user: resultado.user,
+              perfil: resultado.perfil,
+              timestamp: Date.now()
+            }));
+          } catch (error) {
+            console.error('Error guardando sesión:', error);
+          }
+        }
+        
         Alert.alert(
           'Éxito',
           'Sesión iniciada correctamente',
@@ -82,6 +98,16 @@ const IniciarSesion = ({ navigation }) => {
           {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
         </View>
         <Text style={styles.checkboxLabel}>Mostrar contraseña</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.checkboxContainer}
+        onPress={() => setMantenerSesion(!mantenerSesion)}
+      >
+        <View style={[styles.checkbox, mantenerSesion && styles.checkboxChecked]}>
+          {mantenerSesion && <Text style={styles.checkmark}>✓</Text>}
+        </View>
+        <Text style={styles.checkboxLabel}>Mantener sesión iniciada</Text>
       </TouchableOpacity>
 
       <View style={[styles.captchaBox, { height: vs(80) }]}> 
@@ -173,10 +199,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     borderWidth: 2,
     borderColor: '#5D8BF4',
-    backgroundColor: '#5D8BF4',
+    backgroundColor: 'transparent',
     marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#5D8BF4',
   },
   checkmark: {
     color: '#FFFFFF',

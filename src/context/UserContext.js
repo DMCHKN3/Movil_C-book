@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const UserContext = createContext();
 
@@ -13,15 +14,42 @@ export const useUser = () => {
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [perfil, setPerfil] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Verificar sesión guardada al iniciar
+  useEffect(() => {
+    const loadSavedSession = async () => {
+      try {
+        const savedSession = await AsyncStorage.getItem('userSession');
+        if (savedSession) {
+          const sessionData = JSON.parse(savedSession);
+          // Sesión permanente hasta que el usuario decida cerrarla
+          setUser(sessionData.user);
+          setPerfil(sessionData.perfil);
+        }
+      } catch (error) {
+        console.error('Error cargando sesión guardada:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSavedSession();
+  }, []);
 
   const login = (userData, perfilData) => {
     setUser(userData);
     setPerfil(perfilData);
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     setPerfil(null);
+    try {
+      await AsyncStorage.removeItem('userSession');
+    } catch (error) {
+      console.error('Error eliminando sesión guardada:', error);
+    }
   };
 
   const isAuthenticated = () => {
@@ -38,7 +66,8 @@ export const UserProvider = ({ children }) => {
     login,
     logout,
     isAuthenticated,
-    getUserBoleta
+    getUserBoleta,
+    isLoading
   };
 
   return (

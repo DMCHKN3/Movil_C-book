@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getCuenta } from '../../tablas/cuenta';
+import { useUser } from '../context/UserContext';
 
 const Cuenta = ({ navigation }) => {
+  const { logout, getUserBoleta } = useUser();
   const [cuenta, setCuenta] = useState(null);
   const [loading, setLoading] = useState(true);
-  const userId = 1; 
+  const userId = getUserBoleta() || 1; 
   
   const { s, vs, text } = useScale();
 
@@ -60,7 +62,26 @@ const Cuenta = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate('IniciarAcc')}
+            onPress={() => {
+              Alert.alert(
+                'Cerrar Sesión',
+                '¿Estás seguro de que quieres cerrar sesión?',
+                [
+                  {
+                    text: 'Cancelar',
+                    style: 'cancel'
+                  },
+                  {
+                    text: 'Cerrar Sesión',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await logout();
+                      navigation.navigate('IniciarAcc');
+                    }
+                  }
+                ]
+              );
+            }}
             style={styles.buttonContainer}
           >
             <LinearGradient
