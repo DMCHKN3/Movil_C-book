@@ -1,4 +1,5 @@
 import { Alert } from "react-native";
+import { verifBoleta } from "../../BD/authService";
 
 export const validarform = (user, contra, repcontra, nombre, apellidos, correo) => {
     const resUser = /^[0-9]{10}$/;
@@ -6,7 +7,7 @@ export const validarform = (user, contra, repcontra, nombre, apellidos, correo) 
     const resRepContra = /^[A-Za-z0-9\-_.,"#%]{7,16}$/;
     const resNombre = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,100}$/;
     const resApellidos = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,100}$/;
-    const resCorreo = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const resCorreo = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,100}$/;
 
     if (!user || !contra || !nombre || !apellidos || !correo || !repcontra) {
         Alert.alert('Error', 'Por favor complete todos los campos');
@@ -41,6 +42,33 @@ export const validarform = (user, contra, repcontra, nombre, apellidos, correo) 
         return false;
     }
 
+    if (contra !== repcontra) {
+        Alert.alert('Error', 'Las contraseñas no coinciden');
+        return false;
+    }
 
     return true;
+}
+
+// Nueva función asíncrona para validar incluyendo la verificación de boleta
+export const validarformConBD = async (user, contra, repcontra, nombre, apellidos, correo) => {
+    // Primero ejecutar validaciones locales
+    const validacionLocal = validarform(user, contra, repcontra, nombre, apellidos, correo);
+    if (!validacionLocal) {
+        return false;
+    }
+
+    // Luego verificar la boleta en la base de datos
+    try {
+        const verificacion = await verifBoleta(user);
+        if (!verificacion.ok) {
+            Alert.alert('Error', 'La boleta no está registrada en el sistema');
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Error verificando boleta:', error);
+        Alert.alert('Error', 'Error al verificar la boleta. Intenta nuevamente.');
+        return false;
+    }
 }

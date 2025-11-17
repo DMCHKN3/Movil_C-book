@@ -1,29 +1,69 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { validarform } from '../validaciones/validacionForm';
+import { validarformConBD } from '../validaciones/validacionForm';
+import { crearUsuario } from '../../BD/authService';
 
 const CrearCuenta = ({ navigation }) => {
   const { s, vs, text } = useScale();
-  const [user, setUser] = useState ('');
+  const [user, setUser] = useState('');
   const [contra, setContra] = useState('');
-  const [repcontra,setRepContra] = useState('');
+  const [repcontra, setRepContra] = useState('');
   const [nombre, setNombre] = useState('');
   const [apellidos, setApellidos] = useState('');
   const [correo, setCorreo] = useState('');
   const [crearc, setCrearc] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-const handleCrearCuenta = () => {
-  const pasa = validarform(user, contra, repcontra, nombre, apellidos, correo);
-  if (pasa){
-    setUser('');
-    setContra('');
-    setRepContra('');
-    setNombre('');
-    setApellidos('');
-    setCorreo('');
-    setCrearc(true);
+const handleCrearCuenta = async () => {
+  if (isLoading) return; // Prevenir múltiples clicks
+  
+  setIsLoading(true);
+  
+  try {
+    // Validar formulario incluyendo verificación de boleta
+    const esValido = await validarformConBD(user, contra, repcontra, nombre, apellidos, correo);
+    
+    if (esValido) {
+      // Crear usuario en Supabase
+      const resultado = await crearUsuario({
+        boleta: user,
+        nombre: nombre,
+        apellidos: apellidos,
+        correo: correo,
+        contra: contra
+      });
+      
+      if (resultado.ok) {
+        Alert.alert(
+          'Éxito', 
+          'Cuenta creada exitosamente. Por favor verifica tu correo electrónico.',
+          [{
+            text: 'OK',
+            onPress: () => {
+              // Limpiar formulario
+              setUser('');
+              setContra('');
+              setRepContra('');
+              setNombre('');
+              setApellidos('');
+              setCorreo('');
+              setCrearc(true);
+              // Navegar a la pantalla de inicio de sesión
+              navigation.navigate('IniciarAcc');
+            }
+          }]
+        );
+      } else {
+        Alert.alert('Error', resultado.message || 'Error al crear la cuenta');
+      }
+    }
+  } catch (error) {
+    console.error('Error en handleCrearCuenta:', error);
+    Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
+  } finally {
+    setIsLoading(false);
   }
 };
 
@@ -85,15 +125,20 @@ const handleCrearCuenta = () => {
 
       <TouchableOpacity
         onPress={handleCrearCuenta}
-        style={styles.buttonContainer}
+        style={[styles.buttonContainer, isLoading && styles.buttonDisabled]}
+        disabled={isLoading}
       >
         <LinearGradient
-          colors={['#5D2D58', '#C35EB9']}
+          colors={isLoading ? ['#666', '#888'] : ['#5D2D58', '#C35EB9']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.gradientButton}
         >
-          <Text style={styles.buttonText}>Crear Cuenta</Text>
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.buttonText}>Crear Cuenta</Text>
+          )}
         </LinearGradient>
       </TouchableOpacity>
       <TouchableOpacity
@@ -162,6 +207,9 @@ const styles = StyleSheet.create({
   buttonContainer: {
     width: '100%',
     marginTop: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   gradientButton: {
     borderRadius: 20,
