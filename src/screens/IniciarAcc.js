@@ -3,8 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { validarLoginConBD } from '../validaciones/validacionInicioss';
+import { useUser } from '../context/UserContext';
 
 const IniciarSesion = ({ navigation }) => {
+  const { login } = useUser();
   const [user, setUser] = useState('');
   const [contra, setContra] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
@@ -23,6 +25,8 @@ const IniciarSesion = ({ navigation }) => {
       
       if (resultado.ok) {
         setLoggedIn(true);
+        // Guardar usuario en el contexto
+        login(resultado.user, resultado.perfil);
         Alert.alert(
           'Éxito',
           'Sesión iniciada correctamente',
