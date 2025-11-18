@@ -1,12 +1,68 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useUser } from '../context/UserContext';
+import { getEstadoGral } from '../../tablas/estado_gral';
+import { getRecientes } from '../../tablas/actvs_rec';
 
 const Main = ({ navigation }) => {
   const { s, vs, ms, text } = useScale();
   const cardWidth = s(225); // approx 60% of 375
-  const cardHeight = vs(131); // approx 35% of 375 width
+  const { getUserBoleta, isAuthenticated, perfil } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [estadoGral, setEstadoGral] = useState([]);
+  const [recientes, setRecientes] = useState([]);
+  const registro_id = getUserBoleta();
+
+  useEffect(() => {
+    const fetchEstadoGral = async () => {
+      if (!isAuthenticated() || !registro_id) {
+        console.warn('Usuario no autenticado o sin boleta');
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const data = await getEstadoGral(registro_id);
+        setEstadoGral(data);
+      } catch (error) {
+        console.error('Error cargando estado general:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchRecientes = async () => {
+      if (!isAuthenticated() || !registro_id) {
+        console.warn('Usuario no autenticado o sin boleta');
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const data = await getRecientes(registro_id);
+        setRecientes(data);
+      } catch (error) {
+        console.error('Error cargando las solicitudes recientes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEstadoGral();
+    fetchRecientes();
+  }, [registro_id]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#C35EB9" />
+        <Text style={styles.loadingText}>Cargando datos...</Text>
+      </View>
+    );
+  }
+
 
   return (
     <ScrollView style={styles.container}>
@@ -15,7 +71,7 @@ const Main = ({ navigation }) => {
           Bienvenido
         </Text>
         <Text style={[styles.usuario, { fontSize: text(24), marginBottom: vs(20) }]} allowFontScaling>
-          (usuario)
+          {perfil?.boleta || 'Usuario'}
         </Text>
         <Text style={[styles.actividadesLabel, { fontSize: text(14) }]} allowFontScaling>
           Actividades Recientes
@@ -28,17 +84,17 @@ const Main = ({ navigation }) => {
           contentContainerStyle={styles.rowScroll}
           pagingEnabled={false}
         >
-          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: cardHeight, marginRight: 16 }]}> 
+          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: '10%', marginRight: 16 }]}>
             <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
               SOL 1
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: cardHeight, marginRight: 16 }]}> 
+          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: '10%', marginRight: 16 }]}>
             <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
               SOL 2
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: cardHeight, marginRight: 16 }]}> 
+          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: '10%', marginRight: 16 }]}>
             <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
               SOL 3
             </Text>
@@ -49,7 +105,26 @@ const Main = ({ navigation }) => {
           ESTADO GENERAL
         </Text>
 
-        <View style={[styles.estadoCard, { height: vs(200) }]}>
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableHeader, styles.column]}>Tipo de Solicitud</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Fecha de Solicitud</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Estado</Text>
+          </View>
+
+          {estadoGral.length === 0 ? (
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>No hay solicitudes recientes</Text>
+            </View>
+          ) : (
+            estadoGral.map((estado, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.tipo || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.fecha_solicitud || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.estado || 'N/A'}</Text>
+              </View>
+            ))
+          )}
         </View>
 
         <TouchableOpacity
@@ -184,6 +259,60 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '350',
+    fontFamily: 'Segoe UI',
+  },
+
+  table: {
+    width: '100%',
+    backgroundColor: '#3A3A3A',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 40,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#555',
+    alignItems: 'center',
+    minHeight: 48,
+    paddingVertical: 6,
+  },
+  tableHeader: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    textAlign: 'center',
+    backgroundColor: '#2A2A2A',
+    fontFamily: 'Segoe UI',
+    flexWrap: 'wrap',
+  },
+  tableCell: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    textAlign: 'center',
+    fontFamily: 'Segoe UI',
+    flexWrap: 'wrap',
+    flexShrink: 1,
+  },
+  column: {
+    flex: 1.5,
+    borderRightColor: '#555',
+    paddingHorizontal: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1A1F2E',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 10,
+    fontSize: 16,
     fontFamily: 'Segoe UI',
   },
 });
