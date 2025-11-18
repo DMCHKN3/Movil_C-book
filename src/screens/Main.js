@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useUser } from '../context/UserContext';
+import { useUser } from '../context/UserContext'; //
 import { getEstadoGral } from '../../tablas/estado_gral';
 import { getRecientes } from '../../tablas/actvs_rec';
 
@@ -16,42 +16,31 @@ const Main = ({ navigation }) => {
   const registro_id = getUserBoleta();
 
   useEffect(() => {
-    const fetchEstadoGral = async () => {
+    const fetchData = async () => {
       if (!isAuthenticated() || !registro_id) {
         console.warn('Usuario no autenticado o sin boleta');
         setLoading(false);
         return;
       }
+      
       try {
         setLoading(true);
-        const data = await getEstadoGral(registro_id);
-        setEstadoGral(data);
+        // Ejecutar ambas consultas en paralelo usando una promesa para mejor rendimiento
+        const [estadoData, recientesData] = await Promise.all([
+          getEstadoGral(registro_id),
+          getRecientes(registro_id)
+        ]);
+        
+        setEstadoGral(estadoData);
+        setRecientes(recientesData);
       } catch (error) {
-        console.error('Error cargando estado general:', error);
+        console.error('Error cargando datos:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    const fetchRecientes = async () => {
-      if (!isAuthenticated() || !registro_id) {
-        console.warn('Usuario no autenticado o sin boleta');
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const data = await getRecientes(registro_id);
-        setRecientes(data);
-      } catch (error) {
-        console.error('Error cargando las solicitudes recientes:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEstadoGral();
-    fetchRecientes();
+    fetchData();
   }, [registro_id]);
 
   if (loading) {
@@ -71,34 +60,37 @@ const Main = ({ navigation }) => {
           Bienvenido
         </Text>
         <Text style={[styles.usuario, { fontSize: text(24), marginBottom: vs(20) }]} allowFontScaling>
-          {perfil?.boleta || 'Usuario'}
+          {perfil ? `${perfil.correo.split('@')[0]}` : 'Usuario'}
         </Text>
         <Text style={[styles.actividadesLabel, { fontSize: text(14) }]} allowFontScaling>
           Actividades Recientes
         </Text>
 
-        {/* Scroll horizontal para las cajas SOL X */}
+        {/* Scroll horizontal para las actividades recientes */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.rowScroll}
           pagingEnabled={false}
         >
-          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: '10%', marginRight: 16 }]}>
-            <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
-              SOL 1
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: '10%', marginRight: 16 }]}>
-            <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
-              SOL 2
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.caja, { width: cardWidth, height: '10%', marginRight: 16 }]}>
-            <Text style={[styles.cajaTexto, { fontSize: text(28) }]} allowFontScaling>
-              SOL 3
-            </Text>
-          </TouchableOpacity>
+          {recientes.length === 0 ? (
+            <View style={[styles.caja, { width: cardWidth, marginRight: 16 }]}>
+              <Text style={[styles.cajaTexto, { fontSize: text(16), textAlign: 'center' }]} allowFontScaling>
+                No hay actividades recientes
+              </Text>
+            </View>
+          ) : (
+            recientes.slice(0, 5).map((actividad, index) => (
+              <TouchableOpacity key={index} style={[styles.caja, { width: cardWidth, marginRight: 16 }]}>
+                <Text style={[styles.cajaTexto, { fontSize: text(18), marginBottom: 8 }]} allowFontScaling>
+                  {actividad.tipo || 'N/A'}
+                </Text>
+                <Text style={[styles.cajaEstado, { fontSize: text(14) }]} allowFontScaling>
+                  {actividad.estado || 'N/A'}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
         </ScrollView>
 
         <Text style={[styles.estadoLabel, { fontSize: text(12) }]} allowFontScaling>
@@ -230,6 +222,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 32,
     fontFamily: 'Segoe UI',
+    textAlign: 'center',
+  },
+  cajaEstado: {
+    color: '#666666',
+    fontSize: 14,
+    fontFamily: 'Segoe UI',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   estadoLabel: {
     fontSize: 12,
