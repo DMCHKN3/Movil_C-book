@@ -10,8 +10,6 @@ const CrearCuenta = ({ navigation }) => {
   const [user, setUser] = useState('');
   const [contra, setContra] = useState('');
   const [repcontra, setRepContra] = useState('');
-  const [nombre, setNombre] = useState('');
-  const [apellidos, setApellidos] = useState('');
   const [correo, setCorreo] = useState('');
   const [crearc, setCrearc] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,8 +44,6 @@ const handleCrearCuenta = async () => {
               setUser('');
               setContra('');
               setRepContra('');
-              setNombre('');
-              setApellidos('');
               setCorreo('');
               setCrearc(true);
               // Navegar a la pantalla de inicio de sesión
@@ -78,23 +74,6 @@ const handleCrearCuenta = async () => {
         value= {user}
         onChangeText={setUser}
       />
-
-      <View style={styles.rowInputs}>
-        <TextInput
-          style={[styles.inputHalf, { height: vs(50), fontSize: text(16) }]}
-          placeholder="Nombre(s)"
-          placeholderTextColor="#999"
-          value= {nombre}
-        onChangeText={setNombre}
-        />
-        <TextInput
-          style={[styles.inputHalf, { height: vs(50), fontSize: text(16) }]}
-          placeholder="Apellido(s)"
-          placeholderTextColor="#999"
-          value= {apellidos}
-        onChangeText={setApellidos}
-        />
-      </View>
 
       <TextInput
         style={[styles.input, { height: vs(50), fontSize: text(16) }]}
