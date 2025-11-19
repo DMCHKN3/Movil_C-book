@@ -10,6 +10,7 @@ const CrearCuenta = ({ navigation }) => {
   const [user, setUser] = useState('');
   const [contra, setContra] = useState('');
   const [repcontra, setRepContra] = useState('');
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [correo, setCorreo] = useState('');
   const [crearc, setCrearc] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,7 +89,7 @@ const handleCrearCuenta = async () => {
         style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Contraseña"
         placeholderTextColor="#999"
-        secureTextEntry={true}
+        secureTextEntry={!mostrarContrasena}
         value= {contra}
         onChangeText={setContra}
       />
@@ -97,10 +98,20 @@ const handleCrearCuenta = async () => {
         style={[styles.input, { height: vs(50), fontSize: text(16) }]}
         placeholder="Confirmar Contraseña"
         placeholderTextColor="#999"
-        secureTextEntry={true}
+        secureTextEntry={!mostrarContrasena}
         value= {repcontra}
         onChangeText={setRepContra}
       />
+
+      <TouchableOpacity 
+        style={styles.checkboxContainer}
+        onPress={() => setMostrarContrasena(!mostrarContrasena)}
+      >
+        <View style={[styles.checkbox, mostrarContrasena && styles.checkboxChecked]}>
+          {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+        </View>
+        <Text style={styles.checkboxLabel}>Mostrar contraseñas</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         onPress={handleCrearCuenta}
@@ -201,6 +212,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '350',
     fontFamily: 'Segoe UI',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: 5,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderColor: '#5D8BF4',
+    backgroundColor: 'transparent',
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#5D8BF4',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
   },
 });
 
