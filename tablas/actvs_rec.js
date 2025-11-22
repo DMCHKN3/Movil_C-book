@@ -1,5 +1,5 @@
 import { Alert } from "react-native";
-import { supabase } from "../supabase";
+import { supabase } from "../supabase";//
 
 export async function getRecientes(userId) {
     if (!userId) {

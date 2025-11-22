@@ -2,18 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useUser } from '../context/UserContext'; //
+import { useUser } from '../context/UserContext';
 import { getEstadoGral } from '../../tablas/estado_gral';
 import { getRecientes } from '../../tablas/actvs_rec';
 
 const Main = ({ navigation }) => {
   const { s, vs, ms, text } = useScale();
-  const cardWidth = s(225); // approx 60% of 375
+  const cardWidth = s(225);
   const { getUserBoleta, isAuthenticated, perfil } = useUser();
   const [loading, setLoading] = useState(true);
   const [estadoGral, setEstadoGral] = useState([]);
   const [recientes, setRecientes] = useState([]);
   const registro_id = getUserBoleta();
+
+  // Función para convertir el estado booleano a texto descriptivo
+  const formatearEstado = (estado) => {
+    if (estado === true || estado === 'true') {
+      return 'Solicitud activa';
+    } else if (estado === false || estado === 'false') {
+      return 'Solicitud finalizada';
+    } else {
+      return estado || 'Estado desconocido';
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,7 +36,7 @@ const Main = ({ navigation }) => {
       
       try {
         setLoading(true);
-        // Ejecutar ambas consultas en paralelo usando una promesa para mejor rendimiento
+        // Ejecutar ambas consultas en paralelo para mejor rendimiento
         const [estadoData, recientesData] = await Promise.all([
           getEstadoGral(registro_id),
           getRecientes(registro_id)
@@ -82,11 +93,11 @@ const Main = ({ navigation }) => {
           ) : (
             recientes.slice(0, 5).map((actividad, index) => (
               <TouchableOpacity key={index} style={[styles.caja, { width: cardWidth, marginRight: 16 }]}>
-                <Text style={[styles.cajaTexto, { fontSize: text(18), marginBottom: 8 }]} allowFontScaling>
-                  {actividad.tipo || 'N/A'}
+                <Text style={[styles.cajaTexto, { fontSize: text(18), marginBottom: 8 }]} allowFontScaling> 
+                  Tipo de solicitud: {" " + actividad.tipo || ' N/A'}
                 </Text>
-                <Text style={[styles.cajaEstado, { fontSize: text(14) }]} allowFontScaling>
-                  {actividad.estado || 'N/A'}
+                <Text style={[styles.cajaEstado, { fontSize: text(14) }]} allowFontScaling>Estado de tu solicitud: 
+                  {" " + formatearEstado(actividad.estado)}
                 </Text>
               </TouchableOpacity>
             ))
@@ -113,7 +124,7 @@ const Main = ({ navigation }) => {
               <View key={index} style={styles.tableRow}>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.tipo || 'N/A'}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.fecha_solicitud || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.estado || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearEstado(estado.estado)}</Text>
               </View>
             ))
           )}
