@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { validarformConBD } from '../validaciones/validacionForm';
-import { crearUsuario } from '../../BD/authService';
+import { crearCuentaConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
 
 const CrearCuenta = ({ navigation }) => {
   const { s, vs, text } = useScale();
@@ -14,6 +13,7 @@ const CrearCuenta = ({ navigation }) => {
   const [correo, setCorreo] = useState('');
   const [crearc, setCrearc] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [correoParaReenvio, setCorreoParaReenvio] = useState('');
 
 const handleCrearCuenta = async () => {
   if (isLoading) return; // Prevenir múltiples clicks
@@ -21,24 +21,16 @@ const handleCrearCuenta = async () => {
   setIsLoading(true);
   
   try {
-    // Validar formulario incluyendo verificación de boleta
-    const esValido = await validarformConBD(user, contra, repcontra, nombre, apellidos, correo);
+    // Crear cuenta con Supabase Auth (con validación local)
+    const resultado = await crearCuentaConAuth(user, correo, contra, repcontra);
     
-    if (esValido) {
-      // Crear usuario en Supabase
-      const resultado = await crearUsuario({
-        boleta: user,
-        nombre: nombre,
-        apellidos: apellidos,
-        correo: correo,
-        contra: contra
-      });
-      
-      if (resultado.ok) {
-        Alert.alert(
-          'Éxito', 
-          'Cuenta creada exitosamente. Por favor verifica tu correo electrónico.',
-          [{
+    if (resultado.ok) {
+      setCorreoParaReenvio(correo); // Guardar correo para posible reenvío
+      Alert.alert(
+        'Éxito', 
+        resultado.message || 'Cuenta creada exitosamente. Revisa tu correo electrónico para verificar tu cuenta.',
+        [
+          {
             text: 'OK',
             onPress: () => {
               // Limpiar formulario
@@ -50,15 +42,46 @@ const handleCrearCuenta = async () => {
               // Navegar a la pantalla de inicio de sesión
               navigation.navigate('IniciarAcc');
             }
-          }]
-        );
-      } else {
-        Alert.alert('Error', resultado.message || 'Error al crear la cuenta');
-      }
+          },
+          {
+            text: '¿No recibiste el correo?',
+            onPress: () => handleReenviarCorreo(correo),
+            style: 'cancel'
+          }
+        ]
+      );
+    } else {
+      Alert.alert('Error', resultado.message || 'Error al crear la cuenta');
     }
   } catch (error) {
     console.error('Error en handleCrearCuenta:', error);
     Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const handleReenviarCorreo = async (email) => {
+  const correoAReenviar = email || correoParaReenvio;
+  
+  if (!correoAReenviar) {
+    Alert.alert('Error', 'No hay un correo disponible para reenviar');
+    return;
+  }
+
+  setIsLoading(true);
+  
+  try {
+    const resultado = await reenviarConfirmacion(correoAReenviar);
+    
+    if (resultado.ok) {
+      Alert.alert('Éxito', resultado.message || 'Correo de confirmación reenviado exitosamente');
+    } else {
+      Alert.alert('Error', resultado.message || 'Error al reenviar el correo de confirmación');
+    }
+  } catch (error) {
+    console.error('Error reenviando correo:', error);
+    Alert.alert('Error', 'Ocurrió un error al reenviar el correo');
   } finally {
     setIsLoading(false);
   }
