@@ -1,5 +1,4 @@
-import { supabase } from "../supabase";
-import { Alert } from "react-native"; //
+import { supabase } from "../supabase";////
 
 /**
  * Servicio de autenticación con Supabase Auth
@@ -30,7 +29,7 @@ export async function verificarBoletaExiste(boleta) {
         return { ok: true, boleta: data[0] };
     } catch (error) {
         console.error('Error inesperado verificando boleta:', error);
-        return { ok: false, message: 'Error inesperado al verificar la boleta' };
+        return { ok: false, message: 'Boleta no encontrada en el sistema' };
     }
 }
 
@@ -133,7 +132,7 @@ export async function crearCuentaConAuth(boleta, correo, password, confirmPasswo
                 emailRedirectTo: undefined // No necesitamos redirección en mobile
             }
         });
-        
+
         if (authError) {
             console.error('Error creando usuario en Auth:', authError);
             
@@ -173,35 +172,95 @@ export async function crearCuentaConAuth(boleta, correo, password, confirmPasswo
     }
 }
 
-// Función para iniciar sesión (solo validación local - usuario y contraseña)
-// Nota: Esta función NO usa Supabase Auth, solo valida localmente
-// El inicio de sesión se maneja con la lógica existente de authService.js
-export async function iniciarSesionLocal(boleta, password) {
-    console.log('Validando inicio de sesión local para boleta:', boleta);
+export async function insertTablaUsuarios(boleta, correo) {
+    console.log('Insertando usuario en tabla usuarios_web_movil:', { boleta, correo });
+    // Verificar si ya existe una cuenta con la boleta o correo
+    const cuentaExistente = await verificarCuentaExistente(boleta, correo);
+    if (!cuentaExistente.ok) {
+        return cuentaExistente; // Retornar el error si ya existe
+    }
+
+    const {data: CrearUsuarioData, error: CrearUsuarioError} = await supabase
+    .from('usuarios_web_movil')
+    .insert([
+        {boleta: parseInt(boleta), correo: correo, tiene_documentos: false}
+    ]);
+
+    if (CrearUsuarioError) {
+        console.error('Error insertando usuario en tabla personal:', CrearUsuarioError);
+        return { ok: false, message: 'Error inesperado al crear la cuenta' + '\n' + 'Favor de intentar más tarde' };
+    }
+
+    console.log('Usuario insertado en tabla usuarios_web_movil exitosamente:', CrearUsuarioData);
+
+    return { ok: true, message: 'Usuario creado exitosamente' };
+}
+
+// Función para iniciar sesión con Supabase Auth usando correo
+export async function iniciarSesionConAuth(correo, password) {
+    console.log('Iniciando sesión con Supabase Auth:', correo);
     
     try {
-        // Validaciones locales
-        if (!boleta || !password) {
-            return { ok: false, message: 'Por favor ingresa boleta y contraseña' };
+        // Validaciones básicas
+        if (!correo || !password) {
+            return { ok: false, message: 'Por favor ingresa correo y contraseña' };
         }
 
-        const regexBoleta = /^[0-9]{10}$/;
-        if (!regexBoleta.test(boleta)) {
-            return { ok: false, message: 'La boleta debe ser de 10 dígitos' };
+        const regexCorreo = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,100}$/;
+        if (!regexCorreo.test(correo)) {
+            return { ok: false, message: 'El formato del correo electrónico no es válido' };
         }
 
-        // Nota: La validación de contraseña y CAPTCHA se debe hacer en el componente
-        // Esta función solo valida el formato básico
+        if (password.length < 6) {
+            return { ok: false, message: 'La contraseña debe tener al menos 6 caracteres' };
+        }
+
+        // Iniciar sesión con Supabase Auth
+        console.log('Autenticando con Supabase Auth...');
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: correo,
+            password: password
+        });
+
+        if (authError) {
+            console.error('Error en inicio de sesión:', authError);
+            
+            // Manejar errores específicos
+            if (authError.message.includes('Invalid login credentials')) {
+                return { ok: false, message: 'Correo o contraseña incorrectos' };
+            }
+            if (authError.message.includes('Email not confirmed')) {
+                return { 
+                    ok: false, 
+                    message: 'Por favor confirma tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.',
+                    needsEmailConfirmation: true
+                };
+            }
+            
+            return { ok: false, message: authError.message || 'Error al iniciar sesión' };
+        }
+
+        console.log('Inicio de sesión exitoso');
         
-        console.log('Validación local exitosa');
+        // Crear objeto perfil con datos de Auth
+        const perfil = {
+            boleta: authData.user?.user_metadata?.boleta || authData.user?.user_metadata?.custom_boleta,
+            correo: authData.user?.email,
+            id: authData.user?.id,
+            email_confirmed: authData.user?.email_confirmed_at ? true : false
+        };
+
         return {
             ok: true,
-            message: 'Validación local completada. Proceder con autenticación en authService.js'
+            user: authData.user,
+            perfil: perfil,
+            session: authData.session,
+            message: 'Sesión iniciada exitosamente'
         };
 
     } catch (error) {
-        console.error('Error en validación local:', error);
-        return { ok: false, message: 'Error en validación local' };
+        console.error('Error inesperado en iniciarSesionConAuth:', error);
+        return { ok: false, message: 'Error inesperado al iniciar sesión' };
     }
 }
 
@@ -236,9 +295,10 @@ export async function reenviarConfirmacion(correo) {
 
 export default {
     crearCuentaConAuth,
-    iniciarSesionLocal,
+    iniciarSesionConAuth,
     reenviarConfirmacion,
     verificarBoletaExiste,
     verificarCuentaExistente,
-    validarDatosRegistro
+    validarDatosRegistro,
+    insertTablaUsuarios
 };

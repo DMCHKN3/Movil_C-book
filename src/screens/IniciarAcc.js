@@ -3,12 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { validarLoginConBD } from '../validaciones/validacionInicioss';
+import { iniciarSesionConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService'; ////
 import { useUser } from '../context/UserContext';
 
 const IniciarSesion = ({ navigation }) => {
   const { login } = useUser();
-  const [user, setUser] = useState('');
+  const [correo, setCorreo] = useState('');
   const [contra, setContra] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
@@ -16,14 +16,14 @@ const IniciarSesion = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { s, vs, ms, text } = useScale();
 
-
   const handleLogin = async () => {
     if (isLoading) return; // Prevenir múltiples clicks
     
     setIsLoading(true);
     
     try {
-      const resultado = await validarLoginConBD(user, contra);
+      // Iniciar sesión con Supabase Auth
+      const resultado = await iniciarSesionConAuth(correo, contra);
       
       if (resultado.ok) {
         setLoggedIn(true);
@@ -36,8 +36,10 @@ const IniciarSesion = ({ navigation }) => {
             await AsyncStorage.setItem('userSession', JSON.stringify({
               user: resultado.user,
               perfil: resultado.perfil,
+              session: resultado.session,
               timestamp: Date.now()
             }));
+            console.log('Sesión guardada permanentemente');
           } catch (error) {
             console.error('Error guardando sesión:', error);
           }
@@ -49,17 +51,57 @@ const IniciarSesion = ({ navigation }) => {
           [{
             text: 'OK',
             onPress: () => {
-              setUser('');
+              setCorreo('');
               setContra('');
               navigation.navigate('Main');
             }
           }]
         );
+      } else {
+        // Mostrar error y opción de reenviar correo si no está confirmado
+        if (resultado.needsEmailConfirmation) {
+          Alert.alert(
+            'Correo no confirmado',
+            resultado.message,
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Reenviar correo',
+                onPress: () => handleReenviarCorreo(correo)
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Error', resultado.message || 'Error al iniciar sesión');
+        }
       }
-      // Los errores ya se muestran en validarLoginConBD
     } catch (error) {
       console.error('Error en handleLogin:', error);
       Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReenviarCorreo = async (email) => {
+    if (!email) {
+      Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const resultado = await reenviarConfirmacion(email);
+      
+      if (resultado.ok) {
+        Alert.alert('Éxito', resultado.message || 'Correo de confirmación reenviado exitosamente');
+      } else {
+        Alert.alert('Error', resultado.message || 'Error al reenviar el correo de confirmación');
+      }
+    } catch (error) {
+      console.error('Error reenviando correo:', error);
+      Alert.alert('Error', 'Ocurrió un error al reenviar el correo');
     } finally {
       setIsLoading(false);
     }
@@ -75,10 +117,12 @@ const IniciarSesion = ({ navigation }) => {
 
       <TextInput
         style={[styles.input, { height: vs(50), fontSize: text(16) }]}
-        placeholder="Usuario"
+        placeholder="Correo Electrónico"
         placeholderTextColor="#999"
-        value={user}
-        onChangeText={setUser}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={correo}
+        onChangeText={setCorreo}
       />
 
       <TextInput
