@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { crearCuentaConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
+import { crearCuentaConAuth, reenviarConfirmacion, insertTablaUsuarios } from '../../BD/supabaseAuthService';
 
 const CrearCuenta = ({ navigation }) => {
   const { s, vs, text } = useScale();
@@ -21,38 +21,51 @@ const handleCrearCuenta = async () => {
   setIsLoading(true);
   
   try {
-    // Crear cuenta con Supabase Auth (con validación local)
+    // 1. Crear cuenta con Supabase Auth (con validación local)
     const resultado = await crearCuentaConAuth(user, correo, contra, repcontra);
+    // 2. Si la cuenta Auth se creó exitosamente, insertar en tabla personalizada
+    const tablaPersonal = await insertTablaUsuarios(user, correo);
     
-    if (resultado.ok) {
-      setCorreoParaReenvio(correo); // Guardar correo para posible reenvío
-      Alert.alert(
-        'Éxito', 
-        resultado.message || 'Cuenta creada exitosamente. Revisa tu correo electrónico para verificar tu cuenta.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Limpiar formulario
-              setUser('');
-              setContra('');
-              setRepContra('');
-              setCorreo('');
-              setCrearc(true);
-              // Navegar a la pantalla de inicio de sesión
-              navigation.navigate('IniciarAcc');
-            }
-          },
-          {
-            text: '¿No recibiste el correo?',
-            onPress: () => handleReenviarCorreo(correo),
-            style: 'cancel'
-          }
-        ]
-      );
-    } else {
-      Alert.alert('Error', resultado.message || 'Error al crear la cuenta');
+    if (!resultado.ok && !tablaPersonal.ok) {
+      console.error('Error creando cuenta y en tabla personalizada:', resultado.message, tablaPersonal.message);
+      Alert.alert('Error', 'Ocurrió un error al crear la cuenta. Intenta nuevamente.');
+      return;
+    } else if (!resultado.ok) {
+      console.error('Error creando cuenta:', resultado.message);
+      Alert.alert('Error', resultado.message || 'Ocurrió un error al crear la cuenta. Intenta nuevamente.');
+      return;
+    } else if (!tablaPersonal.ok) {
+      console.error('Error en tabla personalizada:', tablaPersonal.message);
+      Alert.alert('Error', 'Cuenta creada pero ocurrió un error al guardar datos adicionales. Contacta soporte.');
+      return;
     }
+    
+    // 3. Ambas operaciones exitosas
+    setCorreoParaReenvio(correo); // Guardar correo para posible reenvío
+    Alert.alert(
+      'Éxito', 
+      resultado.message || 'Cuenta creada exitosamente. Revisa tu correo electrónico para verificar tu cuenta.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Limpiar formulario
+            setUser('');
+            setContra('');
+            setRepContra('');
+            setCorreo('');
+            setCrearc(true);
+            // Navegar a la pantalla de inicio de sesión
+            navigation.navigate('IniciarAcc');
+          }
+        },
+        {
+          text: '¿No recibiste el correo?',
+          onPress: () => handleReenviarCorreo(correo),
+          style: 'cancel'
+        }
+      ]
+    );
   } catch (error) {
     console.error('Error en handleCrearCuenta:', error);
     Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
