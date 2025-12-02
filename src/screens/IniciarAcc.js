@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, ActivityIndicator, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { iniciarSesionConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
@@ -17,6 +18,21 @@ const IniciarSesion = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { s, vs, ms, text } = useScale();
   const [captchaVerif, setCaptchaVerif] = useState(false);
+
+  // Bloquear botón de retroceso para evitar acceder a sesión anterior
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Retornar true bloquea la navegación hacia atrás
+        // pero NO bloquea minimizar/salir de la app
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription.remove();
+    }, [])
+  );
 
   const handleLogin = async () => {
     if (isLoading) return; // Prevenir múltiples clicks

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, BackHandler, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '../context/UserContext';
@@ -9,11 +10,46 @@ import { getRecientes } from '../../tablas/actvs_rec';
 const Main = ({ navigation }) => {
   const { s, vs, ms, text } = useScale();
   const cardWidth = s(225);
-  const { getUserBoleta, isAuthenticated, perfil } = useUser();
+  const { getUserBoleta, isAuthenticated, perfil, logout } = useUser();
   const [loading, setLoading] = useState(true);
   const [estadoGral, setEstadoGral] = useState([]);
   const [recientes, setRecientes] = useState([]);
   const registro_id = getUserBoleta();
+
+  // Interceptar botón de retroceso para mostrar alerta de cerrar sesión
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        Alert.alert(
+          'Cerrar sesión',
+          '¿Deseas cerrar sesión?',
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+              onPress: () => {}
+            },
+            {
+              text: 'Cerrar sesión',
+              onPress: async () => {
+                await logout();
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'IniciarAcc' }],
+                });
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+        return true; // Bloquear navegación hacia atrás
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription.remove();
+    }, [logout, navigation])
+  );
 
   // Función para convertir el estado booleano a texto descriptivo
   const formatearEstado = (estado) => {
@@ -23,6 +59,19 @@ const Main = ({ navigation }) => {
       return 'Solicitud finalizada';
     } else {
       return estado || 'Estado desconocido';
+    }
+  };
+
+  const formatearTipo = (tipo) => {
+    switch (tipo) {
+      case 'libro':
+        return 'Préstamo de libro';
+      case 'restirador':
+        return 'Préstamo de restirador';
+      case 'computadora':
+        return 'Préstamo de computadora';
+      default:
+        return tipo || 'Tipo desconocido';
     }
   };
 
@@ -94,7 +143,7 @@ const Main = ({ navigation }) => {
             recientes.slice(0, 5).map((actividad, index) => (
               <TouchableOpacity key={index} style={[styles.caja, { width: cardWidth, marginRight: 16 }]}>
                 <Text style={[styles.cajaTexto, { fontSize: text(18), marginBottom: 8 }]} allowFontScaling> 
-                  Tipo de solicitud: {" " + actividad.tipo || ' N/A'}
+                  Tipo de solicitud: {" " + formatearTipo(actividad.tipo)}
                 </Text>
                 <Text style={[styles.cajaEstado, { fontSize: text(14) }]} allowFontScaling>Estado de tu solicitud: 
                   {" " + formatearEstado(actividad.estado)}
@@ -122,7 +171,7 @@ const Main = ({ navigation }) => {
           ) : (
             estadoGral.map((estado, index) => (
               <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.tipo || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearTipo(estado.tipo)}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.fecha_solicitud || 'N/A'}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearEstado(estado.estado)}</Text>
               </View>
