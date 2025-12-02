@@ -39,7 +39,7 @@ const handleCrearCuenta = async () => {
       Alert.alert('Error', 'Cuenta creada pero ocurrió un error al guardar datos adicionales. Contacta soporte.');
       return;
     }
-    
+
     // 3. Ambas operaciones exitosas
     setCorreoParaReenvio(correo); // Guardar correo para posible reenvío
     Alert.alert(
@@ -64,7 +64,7 @@ const handleCrearCuenta = async () => {
           onPress: () => handleReenviarCorreo(correo),
           style: 'cancel'
         }
-      ]
+      ] 
     );
   } catch (error) {
     console.error('Error en handleCrearCuenta:', error);

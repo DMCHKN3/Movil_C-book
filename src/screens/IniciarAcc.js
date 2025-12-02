@@ -3,8 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useScale from '../hooks/useScale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { iniciarSesionConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService'; ////
+import { iniciarSesionConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
 import { useUser } from '../context/UserContext';
+import SlideToUnlock from 'react-native-slide-to-unlock';
 
 const IniciarSesion = ({ navigation }) => {
   const { login } = useUser();
@@ -15,21 +16,28 @@ const IniciarSesion = ({ navigation }) => {
   const [mantenerSesion, setMantenerSesion] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { s, vs, ms, text } = useScale();
+  const [captchaVerif, setCaptchaVerif] = useState(false);
 
   const handleLogin = async () => {
     if (isLoading) return; // Prevenir múltiples clicks
-    
+
+    if (!captchaVerif) {
+      Alert.alert('Verificación requerida', 'Por favor completa la verificación de captcha deslizando el control.');
+      return;
+      setCaptchaVerif(false);
+    }
+
     setIsLoading(true);
-    
+
     try {
       // Iniciar sesión con Supabase Auth
       const resultado = await iniciarSesionConAuth(correo, contra);
-      
+
       if (resultado.ok) {
         setLoggedIn(true);
         // Guardar usuario en el contexto
         login(resultado.user, resultado.perfil);
-        
+
         // Guardar sesión si está marcada la opción
         if (mantenerSesion) {
           try {
@@ -44,7 +52,7 @@ const IniciarSesion = ({ navigation }) => {
             console.error('Error guardando sesión:', error);
           }
         }
-        
+
         Alert.alert(
           'Éxito',
           'Sesión iniciada correctamente',
@@ -90,10 +98,10 @@ const IniciarSesion = ({ navigation }) => {
     }
 
     setIsLoading(true);
-    
+
     try {
       const resultado = await reenviarConfirmacion(email);
-      
+
       if (resultado.ok) {
         Alert.alert('Éxito', resultado.message || 'Correo de confirmación reenviado exitosamente');
       } else {
@@ -134,7 +142,7 @@ const IniciarSesion = ({ navigation }) => {
         onChangeText={setContra}
       />
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.checkboxContainer}
         onPress={() => setMostrarContrasena(!mostrarContrasena)}
       >
@@ -144,7 +152,7 @@ const IniciarSesion = ({ navigation }) => {
         <Text style={styles.checkboxLabel}>Mostrar contraseña</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.checkboxContainer}
         onPress={() => setMantenerSesion(!mantenerSesion)}
       >
@@ -154,15 +162,21 @@ const IniciarSesion = ({ navigation }) => {
         <Text style={styles.checkboxLabel}>Mantener sesión iniciada</Text>
       </TouchableOpacity>
 
-      <View style={[styles.captchaBox, { height: vs(80) }]}> 
-        <Text style={[styles.captchaText, { fontSize: text(13) }]}>CAPTCHA</Text>
-      </View>
-
-      <TextInput
-        style={[styles.captchaInput, { height: vs(45), fontSize: text(16) }]}
-        placeholder="Captcha"
-        placeholderTextColor="#999"
-      />
+      <SlideToUnlock
+        onEndReached={() => {
+          setCaptchaVerif(true);
+        }}
+        containerStyle={[styles.captchaBox, {height: vs(80)}]}
+        sliderElement={
+          <View style={styles.sliderButton}>
+            <Text style={styles.sliderText}>→</Text>
+          </View>
+        }
+      >
+        <Text style={[styles.captchaText, { fontSize: text(13), lineHeight: 16 }]}>
+          Desliza para verificar que no eres un robot
+        </Text>
+      </SlideToUnlock>
 
       {/* Botón Inicio de Sesión */}
       <TouchableOpacity
@@ -170,32 +184,32 @@ const IniciarSesion = ({ navigation }) => {
         style={[styles.buttonContainer, isLoading && styles.buttonDisabled]}
         disabled={isLoading}
       >
-          <LinearGradient
-            colors={isLoading ? ['#666', '#888'] : ['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={[styles.buttonText, { fontSize: text(16) }]}>INICIAR SESIÓN</Text>
-            )}
-          </LinearGradient>
+        <LinearGradient
+          colors={isLoading ? ['#666', '#888'] : ['#5D2D58', '#C35EB9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientButton}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={[styles.buttonText, { fontSize: text(16) }]}>INICIAR SESIÓN</Text>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate('CrearAcc')}
         style={styles.buttonContainer}
       >
-          <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            <Text style={[styles.buttonText, { fontSize: text(16) }]}>CREAR CUENTA</Text>
-          </LinearGradient>
+        <LinearGradient
+          colors={['#5D2D58', '#C35EB9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientButton}
+        >
+          <Text style={[styles.buttonText, { fontSize: text(16) }]}>CREAR CUENTA</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </ImageBackground>
   );
@@ -264,17 +278,39 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 80,
     borderRadius: 15,
-    backgroundColor: '#D9D9D9',
+    backgroundColor: '#2A2F42',
+    borderWidth: 2,
+    borderColor: '#5D8BF4',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 15,
+    overflow: 'hidden',
   },
   captchaText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '600',
     fontFamily: 'Segoe UI',
     lineHeight: 16,
+    textAlign: 'center',
+  },
+  sliderButton: {
+    width: 60,
+    height: '100%',
+    backgroundColor: '#5D8BF4',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  sliderText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   captchaInput: {
     width: '60%',

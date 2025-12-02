@@ -5,5 +5,6 @@ npx expo install react-native-screens react-native-safe-area-context
 npx expo install expo-linear-gradient
 npx expo install @supabase/supabase-js
 npx expo install @react-native-async-storage/async-storage
+npm install react-native-slide-to-unlock
 
 son las dependencias para poder utilizar el sistema de ventanas
