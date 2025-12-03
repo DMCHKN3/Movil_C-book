@@ -42,7 +42,7 @@ const IniciarSesion = ({ navigation }) => {
       return;
       setCaptchaVerif(false);
     }
-
+    
     setIsLoading(true);
 
     try {
@@ -163,9 +163,9 @@ const IniciarSesion = ({ navigation }) => {
         onPress={() => setMostrarContrasena(!mostrarContrasena)}
       >
         <View style={styles.checkbox}>
-          {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+          {mostrarContrasena && <Text style={[styles.checkmark, { fontSize: text(14) }]}>✓</Text>}
         </View>
-        <Text style={styles.checkboxLabel}>Mostrar contraseña</Text>
+        <Text style={[styles.checkboxLabel, { fontSize: text(14) }]}>Mostrar contraseña</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -173,9 +173,9 @@ const IniciarSesion = ({ navigation }) => {
         onPress={() => setMantenerSesion(!mantenerSesion)}
       >
         <View style={[styles.checkbox, mantenerSesion && styles.checkboxChecked]}>
-          {mantenerSesion && <Text style={styles.checkmark}>✓</Text>}
+          {mantenerSesion && <Text style={[styles.checkmark, { fontSize: text(14) }]}>✓</Text>}
         </View>
-        <Text style={styles.checkboxLabel}>Mantener sesión iniciada</Text>
+        <Text style={[styles.checkboxLabel, { fontSize: text(14) }]}>Mantener sesión iniciada</Text>
       </TouchableOpacity>
 
       <SlideToUnlock
@@ -185,12 +185,12 @@ const IniciarSesion = ({ navigation }) => {
         containerStyle={[styles.captchaBox, {height: vs(80)}]}
         sliderElement={
           <View style={styles.sliderButton}>
-            <Text style={styles.sliderText}>→</Text>
+            <Text style={[styles.sliderText, { fontSize: text(24) }]}>→</Text>
           </View>
         }
       >
         <Text style={[styles.captchaText, { fontSize: text(13), lineHeight: 16 }]}>
-          Desliza para verificar que no eres un robot
+          {captchaVerif ?  <Text style={{fontWeight: 'bold', fontSize: text(16)}}>Verificado</Text> : 'Desliza para verificar'}
         </Text>
       </SlideToUnlock>
 
