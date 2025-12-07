@@ -10,7 +10,7 @@ export async function getSolicitudes(userId) {
     console.log('Obteniendo solicitudes para usuario:', userId);
     
     const { data, error } = await supabase
-        .from('solicitudes')
+        .from('v_solicitudes_alumno')
         .select('id, tipo, recurso_id, fecha_solicitud, hora_solicitud, hora_limite, estado')
         .eq('registro_id', parseInt(userId))
         .order('fecha_solicitud', { ascending: false });

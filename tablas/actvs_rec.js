@@ -10,9 +10,11 @@ export async function getRecientes(userId) {
     console.log('Obteniendo actividades recientes para usuario:', userId);
     
     const { data, error } = await supabase
-        .from('solicitudes')
+        .from('v_solicitudes_alumno')
         .select('tipo, estado')
         .eq('registro_id', parseInt(userId))
+        .order('fecha_solicitud', { ascending: false })
+        .order('hora_solicitud', { ascending: false })
         .limit(5);
         
     if (error) {

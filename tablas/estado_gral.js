@@ -10,7 +10,7 @@ export async function getEstadoGral(userId) {
     console.log('Obteniendo estado general para usuario:', userId);
     
     const { data, error } = await supabase
-        .from('solicitudes')
+        .from('v_solicitudes_alumno')
         .select('tipo, fecha_solicitud, estado')
         .eq('registro_id', parseInt(userId));
         
