@@ -13,6 +13,34 @@ const Prestamos = ({ navigation }) => {
   
   const registro_id = getUserBoleta();
 
+  const formatearEstado = (estado) => {
+    switch (estado) {
+      case 1 :
+        return 'Pendiente';
+      case 2:
+        return 'Aprobado';
+      case 3:
+        return 'Rechazado';
+      case 4:
+        return 'Cancelada';
+      default:
+        return estado || 'Estado desconocido';
+    }
+  };
+
+  const formatearTipo = (tipo) => {
+    switch (tipo) {
+      case 'libro':
+        return 'Libro';
+      case 'restirador':
+        return 'Restirador';
+      case 'computadora':
+        return 'Computadora';
+      default:
+        return tipo || 'Tipo desconocido';
+    }
+  };
+
   useEffect(() => {
     const fetchPrestamos = async () => {
       if (!isAuthenticated() || !registro_id) {
@@ -68,9 +96,8 @@ const Prestamos = ({ navigation }) => {
 
         <View style={styles.table}>
           <View style={styles.tableRow}>
-            <Text style={[styles.tableHeader, styles.column]}>ID Solicitud</Text>
             <Text style={[styles.tableHeader, styles.column]}>Tipo de Solicitud</Text>
-            <Text style={[styles.tableHeader, styles.column]}>ID Recurso</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Num. del Recurso</Text>
             <Text style={[styles.tableHeader, styles.column]}>Fecha de Solicitud</Text>
             <Text style={[styles.tableHeader, styles.column]}>Hora de Solicitud</Text>
             <Text style={[styles.tableHeader, styles.column]}>Hora Límite</Text>
@@ -79,13 +106,12 @@ const Prestamos = ({ navigation }) => {
 
           {prestamos.map((prestamo, index) => (
             <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.id || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.tipo || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.recurso_id || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearTipo(prestamo.tipo) || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{"No. " + prestamo.recurso_id || 'N/A'}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.fecha_solicitud || 'N/A'}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.hora_solicitud || 'N/A'}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.hora_limite || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.estado || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearEstado(prestamo.estado)}</Text>
             </View>
           ))}
 
@@ -178,7 +204,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     textAlign: 'center',
-    backgroundColor: '#2A2A2A',
     fontFamily: 'Segoe UI',
     flexWrap: 'wrap',
   },

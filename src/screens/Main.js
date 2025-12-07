@@ -53,14 +53,20 @@ const Main = ({ navigation }) => {
 
   // Función para convertir el estado booleano a texto descriptivo
   const formatearEstado = (estado) => {
-    if (estado === true || estado === 'true') {
-      return 'Solicitud activa';
-    } else if (estado === false || estado === 'false') {
-      return 'Solicitud finalizada';
-    } else {
-      return estado || 'Estado desconocido';
+    switch (estado) {
+      case 1:
+        return 'Pendiente';
+      case 2:
+        return 'Aprobado';
+      case 3:
+        return 'Rechazado';
+      case 4:
+        return 'Cancelada';
+      default:
+        return estado || 'Estado desconocido';
     }
   };
+
 
   const formatearTipo = (tipo) => {
     switch (tipo) {
@@ -143,7 +149,7 @@ const Main = ({ navigation }) => {
             recientes.slice(0, 5).map((actividad, index) => (
               <TouchableOpacity key={index} style={[styles.caja, { width: cardWidth, marginRight: 16 }]}>
                 <Text style={[styles.cajaTexto, { fontSize: text(18), marginBottom: 8 }]} allowFontScaling> 
-                  Tipo de solicitud: {" " + formatearTipo(actividad.tipo)}
+                  Tipo de solicitud: {"\n" + formatearTipo(actividad.tipo)}
                 </Text>
                 <Text style={[styles.cajaEstado, { fontSize: text(14) }]} allowFontScaling>Estado de tu solicitud: 
                   {" " + formatearEstado(actividad.estado)}
