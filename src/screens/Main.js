@@ -364,7 +364,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     textAlign: 'center',
-    backgroundColor: '#2A2A2A',
     fontFamily: 'Segoe UI',
     flexWrap: 'wrap',
   },

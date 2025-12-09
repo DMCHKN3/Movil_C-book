@@ -44,20 +44,18 @@ const Biblioteca = ({ navigation }) => {
           <View style={styles.tableRow}>
             <Text style={[styles.tableHeader, styles.column]}>ID</Text>
             <Text style={[styles.tableHeader, styles.column]}>Nombre del{'\n'}Libro</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Edición</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Editorial</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Tomo</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Disponibles</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Clasificación</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Tipo del Material</Text>
+            <Text style={[styles.tableHeader, styles.column]}>Autor</Text>
           </View>
 
           {libros.map((libro, index) => (
             <View key={libro.id || index} style={styles.tableRow}>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.id}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.titulo || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.edicion || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.editorial || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.tomo || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.cantidad_disponible || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.clasificacion || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.tipo_material || 'N/A'}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.autor || 'N/A'}</Text>
             </View>
           ))}
 
@@ -127,7 +125,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     textAlign: 'center',
-    backgroundColor: '#2A2A2A',
     fontFamily: 'Segoe UI',
     flexWrap: 'wrap',
   },
