@@ -28,6 +28,21 @@ const Prestamos = ({ navigation }) => {
     }
   };
 
+  const formatearColor = (estado) => {
+    switch (estado) {
+      case 1:
+        return 'orange';
+      case 2:
+        return 'green';
+      case 3:
+        return 'red';
+      case 4:
+        return 'red';
+      default:
+        return 'black';
+    }
+  };
+
   const formatearTipo = (tipo) => {
     switch (tipo) {
       case 'libro':
@@ -111,7 +126,7 @@ const Prestamos = ({ navigation }) => {
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.fecha_solicitud || 'N/A'}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.hora_solicitud || 'N/A'}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.hora_limite || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearEstado(prestamo.estado)}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12), color: formatearColor(prestamo.estado) }]}>{formatearEstado(prestamo.estado)}</Text>
             </View>
           ))}
 

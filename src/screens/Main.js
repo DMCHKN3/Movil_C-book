@@ -67,6 +67,20 @@ const Main = ({ navigation }) => {
     }
   };
 
+  const formatearColor = (estado) => {
+    switch (estado) {
+      case 1:
+        return 'orange';
+      case 2:
+        return 'green';
+      case 3:
+        return 'red';
+      case 4:
+        return 'red';
+      default:
+        return 'black';
+    }
+  };
 
   const formatearTipo = (tipo) => {
     switch (tipo) {
@@ -151,8 +165,8 @@ const Main = ({ navigation }) => {
                 <Text style={[styles.cajaTexto, { fontSize: text(18), marginBottom: 8 }]} allowFontScaling> 
                   Tipo de solicitud: {"\n" + formatearTipo(actividad.tipo)}
                 </Text>
-                <Text style={[styles.cajaEstado, { fontSize: text(14) }]} allowFontScaling>Estado de tu solicitud: 
-                  {" " + formatearEstado(actividad.estado)}
+                <Text style={[styles.cajaEstado, { fontSize: text(14)}]} allowFontScaling>Estado de tu solicitud: 
+                  <Text style={{color: formatearColor(actividad.estado)}}>{" " + formatearEstado(actividad.estado)}</Text>
                 </Text>
               </TouchableOpacity>
             ))
@@ -179,7 +193,7 @@ const Main = ({ navigation }) => {
               <View key={index} style={styles.tableRow}>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearTipo(estado.tipo)}</Text>
                 <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.fecha_solicitud || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearEstado(estado.estado)}</Text>
+                <Text style={[styles.tableCell, styles.column, { fontSize: text(12), color: formatearColor(estado.estado) }]}>{formatearEstado(estado.estado)}</Text>
               </View>
             ))
           )}
