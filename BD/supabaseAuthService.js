@@ -7,7 +7,6 @@ import { supabase } from "../supabase";////
 
 // Función para verificar si la boleta existe en el sistema
 export async function verificarBoletaExiste(boleta) {
-    console.log('Verificando existencia de boleta:', boleta);
     
     try {
         const boletaNum = parseInt(boleta);
@@ -71,7 +70,6 @@ export function validarDatosRegistro(boleta, correo, password, confirmPassword) 
 
 // Función para verificar si ya existe una cuenta con la boleta o correo
 export async function verificarCuentaExistente(boleta, correo) {
-    console.log('Verificando si ya existe cuenta con boleta o correo');
     
     try {
         // Verificar en la tabla personalizada
@@ -105,7 +103,6 @@ export async function verificarCuentaExistente(boleta, correo) {
 
 // Función principal para crear cuenta con Supabase Auth
 export async function crearCuentaConAuth(boleta, correo, password, confirmPassword) {
-    console.log('Iniciando creación de cuenta con Supabase Auth:', { boleta, correo });
     
     try {
         // 1. Validar datos de entrada (validación local)
@@ -119,7 +116,6 @@ export async function crearCuentaConAuth(boleta, correo, password, confirmPasswo
         
 
         // 2. Crear usuario con Supabase Auth
-        console.log('Creando usuario en Supabase Auth...');
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: correo,
             password: password,
@@ -153,8 +149,6 @@ export async function crearCuentaConAuth(boleta, correo, password, confirmPasswo
             };
         }
 
-        console.log('Usuario creado en Auth exitosamente:', authData.user?.id);
-        console.log('Correo de confirmación enviado automáticamente a:', correo);
 
         return {
             ok: true,
@@ -173,7 +167,6 @@ export async function crearCuentaConAuth(boleta, correo, password, confirmPasswo
 }
 
 export async function insertTablaUsuarios(boleta, correo) {
-    console.log('Insertando usuario en tabla usuarios_web_movil:', { boleta, correo });
     // Verificar si ya existe una cuenta con la boleta o correo
     const cuentaExistente = await verificarCuentaExistente(boleta, correo);
     if (!cuentaExistente.ok) {
@@ -191,14 +184,12 @@ export async function insertTablaUsuarios(boleta, correo) {
         return { ok: false, message: 'Error inesperado al crear la cuenta' + '\n' + 'Favor de intentar más tarde' };
     }
 
-    console.log('Usuario insertado en tabla usuarios_web_movil exitosamente:', CrearUsuarioData);
 
     return { ok: true, message: 'Usuario creado exitosamente' };
 }
 
 // Función para iniciar sesión con Supabase Auth usando correo
 export async function iniciarSesionConAuth(correo, password) {
-    console.log('Iniciando sesión con Supabase Auth:', correo);
     
     try {
         // Validaciones básicas
@@ -216,7 +207,6 @@ export async function iniciarSesionConAuth(correo, password) {
         }
 
         // Iniciar sesión con Supabase Auth
-        console.log('Autenticando con Supabase Auth...');
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: correo,
             password: password
@@ -240,7 +230,6 @@ export async function iniciarSesionConAuth(correo, password) {
             return { ok: false, message: authError.message || 'Error al iniciar sesión' };
         }
 
-        console.log('Inicio de sesión exitoso');
         
         // Crear objeto perfil con datos de Auth
         const perfil = {
@@ -269,7 +258,6 @@ export async function iniciarSesionConAuth(correo, password) {
 
 // Función para reenviar correo de confirmación
 export async function reenviarConfirmacion(correo) {
-    console.log('Reenviando correo de confirmación a:', correo);
     
     try {
         const { error } = await supabase.auth.resend({
