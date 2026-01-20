@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
-import { LinearGradient } from 'expo-linear-gradient';
 import { getLibros } from '../../tablas/libros';
 
 const Biblioteca = ({ navigation }) => {
@@ -28,56 +27,76 @@ const Biblioteca = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#C35EB9" />
-        <Text style={styles.loadingText}>Cargando libros...</Text>
+      <View style={styles.loadingContainer}>
+        <View style={styles.loaderCard}>
+          <ActivityIndicator size="large" color="#C35EB9" />
+          <Text style={styles.loadingText}>Cargando libros...</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={[styles.content, { paddingHorizontal: s(20) }]}>
-        <Text style={[styles.title, { fontSize: text(28), marginBottom: vs(24) }]}>Libros Disponibles</Text>
+        {/* Header */}
+        <View style={styles.headerSection}>
+          <View style={styles.headerIcon}>
+            <Text style={styles.iconEmoji}>📚</Text>
+          </View>
+          <Text style={[styles.title, { fontSize: text(26) }]}>Biblioteca</Text>
+          <Text style={styles.subtitle}>{libros.length} libros disponibles</Text>
+          <View style={styles.divider} />
+        </View>
 
+        {/* Table */}
         <View style={styles.table}>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableHeader, styles.column]}>ID</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Nombre del{'\n'}Libro</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Clasificación</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Tipo del Material</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Autor</Text>
+          <View style={styles.tableHeaderRow}>
+            <Text style={[styles.tableHeader, styles.columnSmall]}>ID</Text>
+            <Text style={[styles.tableHeader, styles.columnLarge]}>Título</Text>
+            <Text style={[styles.tableHeader, styles.columnMedium]}>Clasificación</Text>
+            <Text style={[styles.tableHeader, styles.columnMedium]}>Tipo</Text>
+            <Text style={[styles.tableHeader, styles.columnMedium]}>Autor</Text>
           </View>
 
-          {libros.map((libro, index) => (
-            <View key={libro.id || index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.id}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.titulo || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.clasificacion || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.tipo_material || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{libro.autor || 'N/A'}</Text>
+          {libros.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>📭</Text>
+              <Text style={styles.emptyText}>No hay libros disponibles</Text>
             </View>
-          ))}
-
-          {libros.length === 0 && (
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>No hay libros disponibles</Text>
-            </View>
+          ) : (
+            libros.map((libro, index) => (
+              <View key={libro.id || index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowAlt]}>
+                <View style={[styles.columnSmall, styles.idCell]}>
+                  <View style={styles.idBadge}>
+                    <Text style={[styles.idText, { fontSize: text(11) }]}>{libro.id}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.tableCell, styles.columnLarge, styles.titleCell, { fontSize: text(11) }]}>
+                  {libro.titulo || 'N/A'}
+                </Text>
+                <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
+                  {libro.clasificacion || 'N/A'}
+                </Text>
+                <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
+                  {libro.tipo_material || 'N/A'}
+                </Text>
+                <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
+                  {libro.autor || 'N/A'}
+                </Text>
+              </View>
+            ))
           )}
         </View>
 
+        {/* Back Button */}
         <TouchableOpacity
           onPress={() => navigation.navigate('Main')}
-          style={styles.buttonContainer}
+          style={styles.backButton}
+          activeOpacity={0.8}
         >
-          <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            <Text style={styles.buttonText}>Regresar al Menu Principal</Text>
-          </LinearGradient>
+          <Text style={styles.backIcon}>←</Text>
+          <Text style={[styles.backButtonText, { fontSize: text(15) }]}>Regresar al Menú</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -92,82 +111,167 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 100,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 40,
-    fontFamily: 'Segoe UI',
-  },
-  table: {
-    width: '100%',
-    backgroundColor: '#3A3A3A',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 40,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#555',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingVertical: 6,
-  },
-  tableHeader: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    textAlign: 'center',
-    fontFamily: 'Segoe UI',
-    flexWrap: 'wrap',
-  },
-  tableCell: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    textAlign: 'center',
-    fontFamily: 'Segoe UI',
-    flexWrap: 'wrap',
-    flexShrink: 1,
-  },
-  column: {
-    flex: 1.5,
-    borderRightColor: '#555',
-    paddingHorizontal: 4,
+    paddingTop: 50,
+    paddingBottom: 40,
   },
   loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#111625',
+  },
+  loaderCard: {
+    backgroundColor: '#1A1F2E',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#353A4D',
   },
   loadingText: {
     color: '#FFFFFF',
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Segoe UI',
+    fontWeight: '500',
   },
-  buttonContainer: {
-    width: '80%',
-    marginTop: 20,
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 28,
   },
-  gradientButton: {
-    borderRadius: 20,
-    paddingVertical: 15,
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#C35EB920',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
   },
-  buttonText: {
+  iconEmoji: {
+    fontSize: 32,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '350',
-    fontFamily: 'Segoe UI',
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 8,
+  },
+  divider: {
+    height: 3,
+    width: 50,
+    backgroundColor: '#C35EB9',
+    borderRadius: 2,
+    marginTop: 16,
+  },
+  table: {
+    width: '100%',
+    backgroundColor: '#1A1F2E',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#353A4D',
+    marginBottom: 28,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#252A3D',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 56,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#252A3D',
+  },
+  tableRowAlt: {
+    backgroundColor: '#1E233315',
+  },
+  tableHeader: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  tableCell: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  titleCell: {
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  columnSmall: {
+    flex: 0.6,
+    paddingHorizontal: 2,
+    alignItems: 'center',
+  },
+  columnMedium: {
+    flex: 1.2,
+    paddingHorizontal: 4,
+  },
+  columnLarge: {
+    flex: 1.8,
+    paddingHorizontal: 4,
+  },
+  idCell: {
+    justifyContent: 'center',
+  },
+  idBadge: {
+    backgroundColor: '#C35EB930',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  idText: {
+    color: '#C35EB9',
+    fontWeight: '700',
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+    opacity: 0.6,
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C35EB9',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  backIcon: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 

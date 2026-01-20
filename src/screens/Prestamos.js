@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import useScale from '../hooks/useScale';
-import { LinearGradient } from 'expo-linear-gradient';
 import { getSolicitudes } from '../../tablas/solicitudes';
 import { useUser } from '../context/UserContext';
 
@@ -97,81 +96,109 @@ const Prestamos = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#C35EB9" />
-        <Text style={styles.loadingText}>Cargando solicitudes...</Text>
+      <View style={styles.loadingContainer}>
+        <View style={styles.loaderCard}>
+          <ActivityIndicator size="large" color="#C35EB9" />
+          <Text style={styles.loadingText}>Cargando solicitudes...</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={[styles.content, { paddingHorizontal: s(20) }]}>
-        <Text style={[styles.title, { fontSize: text(28), marginBottom: vs(24) }]}>Solicitudes Actuales</Text>
-
-        <View style={styles.table}>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableHeader, styles.column]}>Tipo de Solicitud</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Num. del Recurso</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Fecha de Solicitud</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Hora de Solicitud</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Hora Límite</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Estado</Text>
+        {/* Header */}
+        <View style={styles.headerSection}>
+          <View style={styles.headerIcon}>
+            <Text style={styles.iconEmoji}>📝</Text>
           </View>
-
-          {prestamos.map((prestamo, index) => (
-            <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearTipo(prestamo.tipo) || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{"No. " + prestamo.recurso_id || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.fecha_solicitud || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.hora_solicitud || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{prestamo.hora_limite || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12), color: formatearColor(prestamo.estado) }]}>{formatearEstado(prestamo.estado)}</Text>
-            </View>
-          ))}
-
-          {!isAuthenticated() || !registro_id ? (
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>Debes iniciar sesión para ver tus préstamos</Text>
-            </View>
-          ) : prestamos.length === 0 && (
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>No tienes préstamos activos</Text>
-            </View>
-          )}
+          <Text style={[styles.title, { fontSize: text(26) }]}>Mis Préstamos</Text>
+          <Text style={styles.subtitle}>{prestamos.length} solicitudes activas</Text>
+          <View style={styles.divider} />
         </View>
 
+        {/* Table */}
+        <View style={styles.table}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View>
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.tableHeader, styles.columnMedium]}>Tipo</Text>
+                <Text style={[styles.tableHeader, styles.columnSmall]}>Recurso</Text>
+                <Text style={[styles.tableHeader, styles.columnMedium]}>Fecha</Text>
+                <Text style={[styles.tableHeader, styles.columnMedium]}>Hora</Text>
+                <Text style={[styles.tableHeader, styles.columnMedium]}>Límite</Text>
+                <Text style={[styles.tableHeader, styles.columnMedium]}>Estado</Text>
+              </View>
+
+              {!isAuthenticated() || !registro_id ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>🔐</Text>
+                  <Text style={styles.emptyText}>Inicia sesión para ver tus préstamos</Text>
+                </View>
+              ) : prestamos.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>📭</Text>
+                  <Text style={styles.emptyText}>No tienes préstamos activos</Text>
+                </View>
+              ) : (
+                prestamos.map((prestamo, index) => (
+                  <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowAlt]}>
+                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(11) }]}>
+                      {formatearTipo(prestamo.tipo) || 'N/A'}
+                    </Text>
+                    <View style={[styles.columnSmall, styles.resourceCell]}>
+                      <View style={styles.resourceBadge}>
+                        <Text style={styles.resourceText}>#{prestamo.recurso_id || '?'}</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
+                      {prestamo.fecha_solicitud || 'N/A'}
+                    </Text>
+                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
+                      {prestamo.hora_solicitud || 'N/A'}
+                    </Text>
+                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
+                      {prestamo.hora_limite || 'N/A'}
+                    </Text>
+                    <View style={[styles.columnMedium, styles.statusCell]}>
+                      <View style={[styles.statusBadge, { backgroundColor: formatearColor(prestamo.estado) + '25' }]}>
+                        <Text style={[styles.statusText, { fontSize: text(9), color: formatearColor(prestamo.estado) }]}>
+                          {formatearEstado(prestamo.estado)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Action Buttons */}
         <TouchableOpacity
           onPress={handleRefresh}
-          style={[styles.buttonContainer, { marginBottom: 15 }]}
+          style={styles.refreshButton}
           disabled={loading}
+          activeOpacity={0.8}
         >
-          <LinearGradient
-            colors={loading ? ['#666', '#888'] : ['#4A90E2', '#7BB3F0']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.buttonText}>🔄 Actualizar Solicitudes</Text>
-            )}
-          </LinearGradient>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <>
+              <Text style={styles.refreshIcon}>🔄</Text>
+              <Text style={[styles.refreshButtonText, { fontSize: text(14) }]}>Actualizar</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => navigation.navigate('Main')}
-          style={styles.buttonContainer}
+          style={styles.backButton}
+          activeOpacity={0.8}
         >
-          <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            <Text style={styles.buttonText}>Regresar al Menu Principal</Text>
-          </LinearGradient>
+          <Text style={styles.backIcon}>←</Text>
+          <Text style={[styles.backButtonText, { fontSize: text(15) }]}>Regresar al Menú</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -186,82 +213,194 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 100,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 40,
-    fontFamily: 'Segoe UI',
-  },
-  table: {
-    width: '100%',
-    backgroundColor: '#3A3A3A',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 40,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#555',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingVertical: 6,
-  },
-  tableHeader: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    textAlign: 'center',
-    fontFamily: 'Segoe UI',
-    flexWrap: 'wrap',
-  },
-  tableCell: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    textAlign: 'center',
-    fontFamily: 'Segoe UI',
-    flexWrap: 'wrap',
-    flexShrink: 1,
-  },
-  column: {
-    flex: 1.5,
-    borderRightColor: '#555',
-    paddingHorizontal: 4,
+    paddingTop: 50,
+    paddingBottom: 40,
   },
   loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#111625',
+  },
+  loaderCard: {
+    backgroundColor: '#1A1F2E',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#353A4D',
   },
   loadingText: {
     color: '#FFFFFF',
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Segoe UI',
+    fontWeight: '500',
   },
-  buttonContainer: {
-    width: '80%',
-    marginTop: 20,
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 28,
   },
-  gradientButton: {
-    borderRadius: 20,
-    paddingVertical: 15,
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#C35EB920',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  iconEmoji: {
+    fontSize: 32,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 8,
+  },
+  divider: {
+    height: 3,
+    width: 50,
+    backgroundColor: '#C35EB9',
+    borderRadius: 2,
+    marginTop: 16,
+  },
+  table: {
+    width: '100%',
+    backgroundColor: '#1A1F2E',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#353A4D',
+    marginBottom: 24,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#252A3D',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 56,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#252A3D',
+  },
+  tableRowAlt: {
+    backgroundColor: '#1E233315',
+  },
+  tableHeader: {
+    color: '#9CA3AF',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  tableCell: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  columnSmall: {
+    width: 70,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  columnMedium: {
+    width: 85,
+    paddingHorizontal: 4,
+  },
+  resourceCell: {
+    justifyContent: 'center',
+  },
+  resourceBadge: {
+    backgroundColor: '#4A90E230',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  resourceText: {
+    color: '#4A90E2',
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  statusCell: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: {
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  statusText: {
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+    opacity: 0.6,
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4A90E2',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  refreshIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  refreshButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '350',
-    fontFamily: 'Segoe UI',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C35EB9',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  backIcon: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 

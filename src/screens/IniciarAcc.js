@@ -3,7 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
-import { LinearGradient } from 'expo-linear-gradient';
 import { iniciarSesionConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
 import { useUser } from '../context/UserContext';
 import SlideToUnlock from 'react-native-slide-to-unlock';
@@ -134,99 +133,110 @@ const IniciarSesion = ({ navigation }) => {
   return (
     <ImageBackground
       source={require('../../assets/fondo.png')}
-      style={[styles.container, { paddingHorizontal: s(30) }]}
+      style={styles.container}
       resizeMode="cover"
     >
-      <Text style={[styles.title, { fontSize: text(24), marginBottom: vs(40) }]}>INICIAR SESION</Text>
-
-      <TextInput
-        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
-        placeholder="Correo Electrónico"
-        placeholderTextColor="#999"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={correo}
-        onChangeText={setCorreo}
-      />
-
-      <TextInput
-        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
-        placeholder="Contraseña"
-        placeholderTextColor="#999"
-        secureTextEntry={!mostrarContrasena}
-        value={contra}
-        onChangeText={setContra}
-      />
-
-      <TouchableOpacity
-        style={styles.checkboxContainer}
-        onPress={() => setMostrarContrasena(!mostrarContrasena)}
-      >
-        <View style={styles.checkbox}>
-          {mostrarContrasena && <Text style={[styles.checkmark, { fontSize: text(14) }]}>✓</Text>}
+      <View style={[styles.formContainer, { paddingHorizontal: s(30) }]}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <Text style={[styles.title, { fontSize: text(28) }]}>Iniciar Sesión</Text>
+          <View style={styles.titleUnderline} />
         </View>
-        <Text style={[styles.checkboxLabel, { fontSize: text(14) }]}>Mostrar contraseña</Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.checkboxContainer}
-        onPress={() => setMantenerSesion(!mantenerSesion)}
-      >
-        <View style={[styles.checkbox, mantenerSesion && styles.checkboxChecked]}>
-          {mantenerSesion && <Text style={[styles.checkmark, { fontSize: text(14) }]}>✓</Text>}
-        </View>
-        <Text style={[styles.checkboxLabel, { fontSize: text(14) }]}>Mantener sesión iniciada</Text>
-      </TouchableOpacity>
-
-      <SlideToUnlock
-        onEndReached={() => {
-          setCaptchaVerif(true);
-        }}
-        containerStyle={[styles.captchaBox, {height: vs(80)}]}
-        sliderElement={
-          <View style={styles.sliderButton}>
-            <Text style={[styles.sliderText, { fontSize: text(24) }]}>→</Text>
+        {/* Input Fields */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Correo Electrónico</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>✉️</Text>
+            <TextInput
+              style={[styles.input, { fontSize: text(15) }]}
+              placeholder="ejemplo@correo.com"
+              placeholderTextColor="#6B7280"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={correo}
+              onChangeText={setCorreo}
+            />
           </View>
-        }
-      >
-        <Text style={[styles.captchaText, { fontSize: text(13), lineHeight: 16 }]}>
-          {captchaVerif ?  <Text style={{fontWeight: 'bold', fontSize: text(16)}}>Verificado</Text> : 'Desliza para verificar'}
-        </Text>
-      </SlideToUnlock>
+        </View>
 
-      {/* Botón Inicio de Sesión */}
-      <TouchableOpacity
-        onPress={handleLogin}
-        style={[styles.buttonContainer, isLoading && styles.buttonDisabled]}
-        disabled={isLoading}
-      >
-        <LinearGradient
-          colors={isLoading ? ['#666', '#888'] : ['#5D2D58', '#C35EB9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientButton}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Contraseña</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>🔒</Text>
+            <TextInput
+              style={[styles.input, { fontSize: text(15) }]}
+              placeholder="Tu contraseña"
+              placeholderTextColor="#6B7280"
+              secureTextEntry={!mostrarContrasena}
+              value={contra}
+              onChangeText={setContra}
+            />
+          </View>
+        </View>
+
+        {/* Checkboxes */}
+        <View style={styles.optionsContainer}>
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setMostrarContrasena(!mostrarContrasena)}
+          >
+            <View style={[styles.checkbox, mostrarContrasena && styles.checkboxChecked]}>
+              {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={[styles.checkboxLabel, { fontSize: text(13) }]}>Mostrar contraseña</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setMantenerSesion(!mantenerSesion)}
+          >
+            <View style={[styles.checkbox, mantenerSesion && styles.checkboxChecked]}>
+              {mantenerSesion && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={[styles.checkboxLabel, { fontSize: text(13) }]}>Mantener sesión</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Captcha */}
+        <SlideToUnlock
+          onEndReached={() => {
+            setCaptchaVerif(true);
+          }}
+          containerStyle={[styles.captchaBox, { height: vs(60) }]}
+          sliderElement={
+            <View style={styles.sliderButton}>
+              <Text style={[styles.sliderText, { fontSize: text(20) }]}>→</Text>
+            </View>
+          }
+        >
+          <Text style={[styles.captchaText, { fontSize: text(13) }]}>
+            {captchaVerif ? <Text style={{ fontWeight: 'bold' }}>✓ Verificado</Text> : 'Desliza para verificar'}
+          </Text>
+        </SlideToUnlock>
+
+        {/* Buttons */}
+        <TouchableOpacity
+          onPress={handleLogin}
+          style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+          disabled={isLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={[styles.buttonText, { fontSize: text(16) }]}>INICIAR SESIÓN</Text>
+            <Text style={[styles.primaryButtonText, { fontSize: text(16) }]}>Iniciar Sesión</Text>
           )}
-        </LinearGradient>
-      </TouchableOpacity>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => navigation.navigate('CrearAcc')}
-        style={styles.buttonContainer}
-      >
-        <LinearGradient
-          colors={['#5D2D58', '#C35EB9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientButton}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CrearAcc')}
+          style={styles.secondaryButton}
+          activeOpacity={0.8}
         >
-          <Text style={[styles.buttonText, { fontSize: text(16) }]}>CREAR CUENTA</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+          <Text style={[styles.secondaryButtonText, { fontSize: text(15) }]}>Crear nueva cuenta</Text>
+        </TouchableOpacity>
+      </View>
     </ImageBackground>
   );
 };
@@ -234,131 +244,161 @@ const IniciarSesion = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor opcional como fallback
     backgroundColor: '#111625',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 30,
+  },
+  formContainer: {
+    backgroundColor: 'rgba(17, 22, 37, 0.92)',
+    marginHorizontal: 20,
+    borderRadius: 24,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 40,
-    fontFamily: 'Segoe UI',
+    letterSpacing: 0.5,
+  },
+  titleUnderline: {
+    height: 3,
+    width: 50,
+    backgroundColor: '#C35EB9',
+    borderRadius: 2,
+    marginTop: 10,
+  },
+  inputGroup: {
+    marginBottom: 18,
+  },
+  inputLabel: {
+    color: '#9CA3AF',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E2333',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    fontSize: 16,
+    marginRight: 12,
   },
   input: {
-    width: '100%',
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#F2D9E3',
-    backgroundColor: '#111625',
-    paddingHorizontal: 20,
+    flex: 1,
+    height: 52,
     color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 15,
-    fontFamily: 'Abel',
+    fontSize: 15,
+  },
+  optionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    marginTop: 4,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-    marginTop: 5,
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 3,
+    borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#5D8BF4',
+    borderColor: '#C35EB9',
     backgroundColor: 'transparent',
     marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#5D8BF4',
+    backgroundColor: '#C35EB9',
   },
   checkmark: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   checkboxLabel: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#9CA3AF',
+    fontSize: 13,
   },
   captchaBox: {
     width: '100%',
-    height: 80,
-    borderRadius: 15,
-    backgroundColor: '#2A2F42',
-    borderWidth: 2,
-    borderColor: '#5D8BF4',
+    height: 60,
+    borderRadius: 14,
+    backgroundColor: '#1E2333',
+    borderWidth: 1,
+    borderColor: '#353A4D',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
     overflow: 'hidden',
   },
   captchaText: {
-    color: '#FFFFFF',
+    color: '#9CA3AF',
     fontSize: 13,
     fontWeight: '600',
-    fontFamily: 'Segoe UI',
-    lineHeight: 16,
     textAlign: 'center',
   },
   sliderButton: {
-    width: 60,
+    width: 50,
     height: '100%',
-    backgroundColor: '#5D8BF4',
+    backgroundColor: '#C35EB9',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
   },
   sliderText: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
   },
-  captchaInput: {
-    width: '60%',
-    height: 45,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#F2D9E3',
-    backgroundColor: '#111625',
-    paddingHorizontal: 20,
+  primaryButton: {
+    width: '100%',
+    height: 52,
+    backgroundColor: '#C35EB9',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    marginBottom: 25,
-    textAlign: 'center',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  buttonContainer: {
+  secondaryButton: {
     width: '100%',
-    marginBottom: 15,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  gradientButton: {
-    borderRadius: 20,
-    paddingVertical: 15,
+    height: 52,
+    backgroundColor: 'transparent',
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#C35EB9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '350',
-    fontFamily: 'Segoe UI',
+  secondaryButtonText: {
+    color: '#C35EB9',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
 

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, BackHandler, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, BackHandler, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '../context/UserContext';
 import { getEstadoGral } from '../../tablas/estado_gral';
 import { getRecientes } from '../../tablas/actvs_rec';
 
+const { width } = Dimensions.get('window');
+
 const Main = ({ navigation }) => {
   const { s, vs, ms, text } = useScale();
-  const cardWidth = s(225);
+  const cardWidth = s(200);
   const { getUserBoleta, isAuthenticated, perfil, logout } = useUser();
   const [loading, setLoading] = useState(true);
   const [estadoGral, setEstadoGral] = useState([]);
@@ -126,120 +127,156 @@ const Main = ({ navigation }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#C35EB9" />
-        <Text style={styles.loadingText}>Cargando datos...</Text>
+        <View style={styles.loaderCard}>
+          <ActivityIndicator size="large" color="#C35EB9" />
+          <Text style={styles.loadingText}>Cargando datos...</Text>
+        </View>
       </View>
     );
   }
 
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
-        <Text style={[styles.bienvenida, { fontSize: text(32) }]} allowFontScaling>
-          Bienvenido
-        </Text>
-        <Text style={[styles.usuario, { fontSize: text(24), marginBottom: vs(20) }]} allowFontScaling>
-          {perfil ? `${perfil.correo.split('@')[0]}` : 'Usuario'}
-        </Text>
-        <Text style={[styles.actividadesLabel, { fontSize: text(14) }]} allowFontScaling>
-          Actividades Recientes
-        </Text>
-
-        {/* Scroll horizontal para las actividades recientes */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.rowScroll}
-          pagingEnabled={false}
-        >
-          {recientes.length === 0 ? (
-            <View style={[styles.caja, { width: cardWidth, marginRight: 16 }]}>
-              <Text style={[styles.cajaTexto, { fontSize: text(16), textAlign: 'center' }]} allowFontScaling>
-                No hay actividades recientes
-              </Text>
-            </View>
-          ) : (
-            recientes.slice(0, 5).map((actividad, index) => (
-              <TouchableOpacity key={index} style={[styles.caja, { width: cardWidth, marginRight: 16 }]}>
-                <Text style={[styles.cajaTexto, { fontSize: text(18), marginBottom: 8 }]} allowFontScaling> 
-                  Tipo de solicitud: {"\n" + formatearTipo(actividad.tipo)}
-                </Text>
-                <Text style={[styles.cajaEstado, { fontSize: text(14)}]} allowFontScaling>Estado de tu solicitud: 
-                  <Text style={{color: formatearColor(actividad.estado)}}>{" " + formatearEstado(actividad.estado)}</Text>
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </ScrollView>
-
-        <Text style={[styles.estadoLabel, { fontSize: text(12) }]} allowFontScaling>
-          ESTADO GENERAL
-        </Text>
-
-        <View style={styles.table}>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableHeader, styles.column]}>Tipo de Solicitud</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Fecha de Solicitud</Text>
-            <Text style={[styles.tableHeader, styles.column]}>Estado</Text>
-          </View>
-
-          {estadoGral.length === 0 ? (
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>No hay solicitudes recientes</Text>
-            </View>
-          ) : (
-            estadoGral.map((estado, index) => (
-              <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{formatearTipo(estado.tipo)}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12) }]}>{estado.fecha_solicitud || 'N/A'}</Text>
-                <Text style={[styles.tableCell, styles.column, { fontSize: text(12), color: formatearColor(estado.estado) }]}>{formatearEstado(estado.estado)}</Text>
-              </View>
-            ))
-          )}
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <Text style={[styles.bienvenida, { fontSize: text(28) }]} allowFontScaling>
+            ¡Hola de nuevo!
+          </Text>
+          <Text style={[styles.usuario, { fontSize: text(22), marginBottom: vs(8) }]} allowFontScaling>
+            {perfil ? `${perfil.correo.split('@')[0]}` : 'Usuario'}
+          </Text>
+          <View style={styles.divider} />
         </View>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Biblioteca')}
-          style={styles.buttonContainer}
-        >
-          <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            <Text style={[styles.buttonText, { fontSize: text(16) }]} allowFontScaling>Ir a Biblioteca</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        {/* Actividades Recientes Section */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Text style={styles.iconText}>📋</Text>
+            </View>
+            <Text style={[styles.actividadesLabel, { fontSize: text(16) }]} allowFontScaling>
+              Actividades Recientes
+            </Text>
+          </View>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Prestamos')}
-          style={styles.buttonContainer}
-        >
-          <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.rowScroll}
+            pagingEnabled={false}
           >
-            <Text style={[styles.buttonText, { fontSize: text(16) }]} allowFontScaling>Ir a Prestamos</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            {recientes.length === 0 ? (
+              <View style={[styles.caja, { width: cardWidth }]}>
+                <View style={styles.emptyStateIcon}>
+                  <Text style={styles.emptyIcon}>📭</Text>
+                </View>
+                <Text style={[styles.cajaTextoEmpty, { fontSize: text(14) }]} allowFontScaling>
+                  Sin actividades recientes
+                </Text>
+              </View>
+            ) : (
+              recientes.slice(0, 5).map((actividad, index) => (
+                <View key={index} style={[styles.caja, { width: cardWidth }]}>
+                  <View style={styles.cardHeader}>
+                    <View style={[styles.statusDot, { backgroundColor: formatearColor(actividad.estado) }]} />
+                    <Text style={[styles.cardType, { fontSize: text(11) }]} allowFontScaling>
+                      {formatearTipo(actividad.tipo)}
+                    </Text>
+                  </View>
+                  <View style={styles.cardContent}>
+                    <Text style={[styles.cajaEstado, { fontSize: text(13) }]} allowFontScaling>
+                      Estado
+                    </Text>
+                    <Text style={[styles.estadoValue, { fontSize: text(16), color: formatearColor(actividad.estado) }]} allowFontScaling>
+                      {formatearEstado(actividad.estado)}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </View>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Cuenta')}
-          style={styles.buttonContainer}
-        >
-          <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
+        {/* Estado General Section */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Text style={styles.iconText}>📊</Text>
+            </View>
+            <Text style={[styles.estadoLabel, { fontSize: text(16) }]} allowFontScaling>
+              Estado General
+            </Text>
+          </View>
+
+          <View style={styles.table}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.tableHeader, styles.column]}>Solicitud</Text>
+              <Text style={[styles.tableHeader, styles.column]}>Fecha</Text>
+              <Text style={[styles.tableHeader, styles.column]}>Estado</Text>
+            </View>
+
+            {estadoGral.length === 0 ? (
+              <View style={styles.emptyTableRow}>
+                <Text style={styles.emptyTableText}>No hay solicitudes</Text>
+              </View>
+            ) : (
+              estadoGral.map((estado, index) => (
+                <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowAlt]}>
+                  <Text style={[styles.tableCell, styles.column, { fontSize: text(11) }]}>{formatearTipo(estado.tipo)}</Text>
+                  <Text style={[styles.tableCell, styles.column, { fontSize: text(11) }]}>{estado.fecha_solicitud || 'N/A'}</Text>
+                  <View style={[styles.column, styles.statusCell]}>
+                    <View style={[styles.statusBadge, { backgroundColor: formatearColor(estado.estado) + '20' }]}>
+                      <Text style={[styles.statusText, { fontSize: text(10), color: formatearColor(estado.estado) }]}>
+                        {formatearEstado(estado.estado)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
+        {/* Navigation Buttons */}
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Biblioteca')}
+            style={styles.navButton}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.buttonText, { fontSize: text(16) }]} allowFontScaling>Ir a Cuenta</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <View style={styles.navButtonIcon}>
+              <Text style={styles.navIcon}>📚</Text>
+            </View>
+            <Text style={[styles.navButtonText, { fontSize: text(14) }]}>Biblioteca</Text>
+            <Text style={styles.arrowIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Prestamos')}
+            style={styles.navButton}
+            activeOpacity={0.8}
+          >
+            <View style={styles.navButtonIcon}>
+              <Text style={styles.navIcon}>📝</Text>
+            </View>
+            <Text style={[styles.navButtonText, { fontSize: text(14) }]}>Préstamos</Text>
+            <Text style={styles.arrowIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Cuenta')}
+            style={styles.navButton}
+            activeOpacity={0.8}
+          >
+            <View style={styles.navButtonIcon}>
+              <Text style={styles.navIcon}>👤</Text>
+            </View>
+            <Text style={[styles.navButtonText, { fontSize: text(14) }]}>Mi Cuenta</Text>
+            <Text style={styles.arrowIcon}>›</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
@@ -253,134 +290,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 100,
-    alignItems: 'flex-start',
-  },
-  bienvenida: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Segoe UI',
-  },
-  usuario: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 40,
-    fontFamily: 'Segoe UI',
-  },
-  actividadesLabel: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    marginBottom: 20,
-    fontFamily: 'Segoe UI',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginBottom: 50,
-    width: '100%',
-  },
-  rowScroll: {
-    paddingVertical: 8,
-    paddingLeft: 0,
-    paddingRight: 8,
-    marginBottom: 24,
-  },
-  caja: {
-    backgroundColor: '#D9D9D9',
-    width: 200,
-    height: 140,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexGrow: 0
-  },
-  cajaTexto: {
-    color: '#000000',
-    fontWeight: 'bold',
-    fontSize: 32,
-    fontFamily: 'Segoe UI',
-    textAlign: 'center',
-  },
-  cajaEstado: {
-    color: '#666666',
-    fontSize: 14,
-    fontFamily: 'Segoe UI',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  estadoLabel: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    marginBottom: 15,
-    fontFamily: 'Segoe UI',
-    letterSpacing: 1,
-  },
-  estadoCard: {
-    backgroundColor: '#D9D9D9',
-    width: '100%',
-    height: 200,
-    borderRadius: 0,
-    marginBottom: 40,
-  },
-  buttonContainer: {
-    width: '100%',
-    marginBottom: 15,
-  },
-  gradientButton: {
-    borderRadius: 20,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '350',
-    fontFamily: 'Segoe UI',
-  },
-
-  table: {
-    width: '100%',
-    backgroundColor: '#3A3A3A',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 40,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#555',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingVertical: 6,
-  },
-  tableHeader: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    textAlign: 'center',
-    fontFamily: 'Segoe UI',
-    flexWrap: 'wrap',
-  },
-  tableCell: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    textAlign: 'center',
-    fontFamily: 'Segoe UI',
-    flexWrap: 'wrap',
-    flexShrink: 1,
-  },
-  column: {
-    flex: 1.5,
-    borderRightColor: '#555',
-    paddingHorizontal: 4,
+    paddingTop: 50,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -388,11 +299,234 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1A1F2E',
   },
+  loaderCard: {
+    backgroundColor: '#252A3D',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   loadingText: {
     color: '#FFFFFF',
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Segoe UI',
+    fontWeight: '500',
+  },
+  headerSection: {
+    marginBottom: 24,
+  },
+  bienvenida: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: '#9CA3AF',
+    letterSpacing: 0.5,
+  },
+  usuario: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  divider: {
+    height: 3,
+    width: 60,
+    backgroundColor: '#C35EB9',
+    borderRadius: 2,
+    marginTop: 12,
+  },
+  sectionContainer: {
+    marginBottom: 28,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#252A3D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  iconText: {
+    fontSize: 18,
+  },
+  actividadesLabel: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  rowScroll: {
+    paddingVertical: 4,
+    paddingRight: 20,
+    gap: 14,
+  },
+  caja: {
+    backgroundColor: '#252A3D',
+    height: 130,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  cardType: {
+    color: '#9CA3AF',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cajaEstado: {
+    color: '#6B7280',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  estadoValue: {
+    fontWeight: '700',
+  },
+  emptyStateIcon: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  emptyIcon: {
+    fontSize: 32,
+    opacity: 0.6,
+  },
+  cajaTextoEmpty: {
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  estadoLabel: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  table: {
+    width: '100%',
+    backgroundColor: '#252A3D',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#353A4D',
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#1E2333',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#353A4D',
+  },
+  tableRowAlt: {
+    backgroundColor: '#1E233310',
+  },
+  tableHeader: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableCell: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  column: {
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  statusCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  emptyTableRow: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyTableText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  buttonsContainer: {
+    marginTop: 8,
+    gap: 12,
+  },
+  navButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#252A3D',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+  },
+  navButtonIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#C35EB920',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  navIcon: {
+    fontSize: 22,
+  },
+  navButtonText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  arrowIcon: {
+    color: '#C35EB9',
+    fontSize: 24,
+    fontWeight: '300',
   },
 });
 

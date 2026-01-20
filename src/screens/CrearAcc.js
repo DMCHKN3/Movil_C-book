@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import useScale from '../hooks/useScale';
-import { LinearGradient } from 'expo-linear-gradient';
 import { crearCuentaConAuth, reenviarConfirmacion, insertTablaUsuarios } from '../../BD/supabaseAuthService';
 
 const CrearCuenta = ({ navigation }) => {
@@ -101,86 +100,110 @@ const handleReenviarCorreo = async (email) => {
 };
 
   return (
-    <View style={[styles.container, { paddingHorizontal: s(30) }] }>
-      <Text style={[styles.title, { fontSize: text(24), marginBottom: vs(40) }]}>CREA TU CUENTA</Text>
-
-      <TextInput
-        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
-        placeholder="Número de boleta"
-        placeholderTextColor="#999"
-        value= {user}
-        onChangeText={setUser}
-      />
-
-      <TextInput
-        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
-        placeholder="Correo Electronico"
-        placeholderTextColor="#999"
-        keyboardType="email-address"
-        value= {correo}
-        onChangeText={setCorreo}
-      />
-
-      <TextInput
-        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
-        placeholder="Contraseña"
-        placeholderTextColor="#999"
-        secureTextEntry={!mostrarContrasena}
-        value= {contra}
-        onChangeText={setContra}
-      />
-
-      <TextInput
-        style={[styles.input, { height: vs(50), fontSize: text(16) }]}
-        placeholder="Confirmar Contraseña"
-        placeholderTextColor="#999"
-        secureTextEntry={!mostrarContrasena}
-        value= {repcontra}
-        onChangeText={setRepContra}
-      />
-
-      <TouchableOpacity 
-        style={styles.checkboxContainer}
-        onPress={() => setMostrarContrasena(!mostrarContrasena)}
-      >
-        <View style={[styles.checkbox, mostrarContrasena && styles.checkboxChecked]}>
-          {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={[styles.formContainer, { paddingHorizontal: s(24) }]}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <Text style={[styles.title, { fontSize: text(26) }]}>Crear Cuenta</Text>
+          <View style={styles.titleUnderline} />
+          <Text style={styles.subtitle}>Únete a nuestra comunidad</Text>
         </View>
-        <Text style={styles.checkboxLabel}>Mostrar contraseñas</Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={handleCrearCuenta}
-        style={[styles.buttonContainer, isLoading && styles.buttonDisabled]}
-        disabled={isLoading}
-      >
-        <LinearGradient
-          colors={isLoading ? ['#666', '#888'] : ['#5D2D58', '#C35EB9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientButton}
+        {/* Input Fields */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Número de Boleta</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>🎫</Text>
+            <TextInput
+              style={[styles.input, { fontSize: text(15) }]}
+              placeholder="Ingresa tu boleta"
+              placeholderTextColor="#6B7280"
+              value={user}
+              onChangeText={setUser}
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Correo Electrónico</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>✉️</Text>
+            <TextInput
+              style={[styles.input, { fontSize: text(15) }]}
+              placeholder="ejemplo@correo.com"
+              placeholderTextColor="#6B7280"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={correo}
+              onChangeText={setCorreo}
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Contraseña</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>🔒</Text>
+            <TextInput
+              style={[styles.input, { fontSize: text(15) }]}
+              placeholder="Crea una contraseña"
+              placeholderTextColor="#6B7280"
+              secureTextEntry={!mostrarContrasena}
+              value={contra}
+              onChangeText={setContra}
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Confirmar Contraseña</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>🔐</Text>
+            <TextInput
+              style={[styles.input, { fontSize: text(15) }]}
+              placeholder="Repite tu contraseña"
+              placeholderTextColor="#6B7280"
+              secureTextEntry={!mostrarContrasena}
+              value={repcontra}
+              onChangeText={setRepContra}
+            />
+          </View>
+        </View>
+
+        {/* Checkbox */}
+        <TouchableOpacity
+          style={styles.checkboxContainer}
+          onPress={() => setMostrarContrasena(!mostrarContrasena)}
+        >
+          <View style={[styles.checkbox, mostrarContrasena && styles.checkboxChecked]}>
+            {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.checkboxLabel}>Mostrar contraseñas</Text>
+        </TouchableOpacity>
+
+        {/* Buttons */}
+        <TouchableOpacity
+          onPress={handleCrearCuenta}
+          style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+          disabled={isLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.buttonText}>Crear Cuenta</Text>
+            <Text style={[styles.primaryButtonText, { fontSize: text(16) }]}>Crear Cuenta</Text>
           )}
-        </LinearGradient>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => navigation.navigate('IniciarAcc')}
-        style={styles.buttonContainer}
-      >
-        <LinearGradient
-          colors={['#5D2D58', '#C35EB9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientButton}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('IniciarAcc')}
+          style={styles.secondaryButton}
+          activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>Volver a Iniciar Sesión</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
+          <Text style={[styles.secondaryButtonText, { fontSize: text(15) }]}>Ya tengo cuenta</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -188,96 +211,134 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#111625',
-    alignItems: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 30,
+    paddingVertical: 40,
+  },
+  formContainer: {
+    backgroundColor: '#1A1F2E',
+    marginHorizontal: 20,
+    borderRadius: 24,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 28,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 40,
-    fontFamily: 'Segoe UI',
+    letterSpacing: 0.5,
   },
-  input: {
-    width: '100%',
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#F2D9E3',
-    backgroundColor: '#111625',
-    paddingHorizontal: 20,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 15,
-    fontFamily: 'Abel',
-  },
-  rowInputs: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 15,
-  },
-  inputHalf: {
-    width: '48%',
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#F2D9E3',
-    backgroundColor: '#111625',
-    paddingHorizontal: 20,
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Abel',
-  },
-  buttonContainer: {
-    width: '100%',
+  titleUnderline: {
+    height: 3,
+    width: 50,
+    backgroundColor: '#C35EB9',
+    borderRadius: 2,
     marginTop: 10,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  subtitle: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 12,
   },
-  gradientButton: {
-    borderRadius: 20,
-    paddingVertical: 15,
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#252A3D',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+    paddingHorizontal: 16,
   },
-  buttonText: {
-    color: '#FFFFFF',
+  inputIcon: {
     fontSize: 16,
-    fontWeight: '350',
-    fontFamily: 'Segoe UI',
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    height: 50,
+    color: '#FFFFFF',
+    fontSize: 15,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-    marginTop: 5,
+    marginBottom: 24,
+    marginTop: 8,
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 3,
+    borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#5D8BF4',
+    borderColor: '#C35EB9',
     backgroundColor: 'transparent',
-    marginRight: 8,
+    marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#5D8BF4',
+    backgroundColor: '#C35EB9',
   },
   checkmark: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   checkboxLabel: {
-    color: '#FFFFFF',
+    color: '#9CA3AF',
     fontSize: 14,
+  },
+  primaryButton: {
+    width: '100%',
+    height: 52,
+    backgroundColor: '#C35EB9',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  secondaryButton: {
+    width: '100%',
+    height: 52,
+    backgroundColor: 'transparent',
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#C35EB9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: '#C35EB9',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
 

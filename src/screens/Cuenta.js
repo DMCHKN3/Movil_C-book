@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import useScale from '../hooks/useScale';
-import { LinearGradient } from 'expo-linear-gradient';
 import { getUsuario } from '../../tablas/cuenta';
 import { getDatos } from '../../tablas/cuenta';
 import { useUser } from '../context/UserContext';
@@ -50,34 +49,65 @@ const Cuenta = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: s(20) }]}>
-        <Text style={[styles.title, { fontSize: text(28), marginBottom: vs(24) }]}>Datos Personales</Text>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: s(20) }]} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.headerSection}>
+          <Text style={[styles.title, { fontSize: text(26) }]}>Mi Cuenta</Text>
+          <View style={styles.divider} />
+        </View>
 
-        <View style={styles.card}>
-          <View style={styles.iconContainer}>
-            <View style={[styles.iconCircle, { width: s(60), height: s(60), borderRadius: s(30) }]}>
-              <View style={[styles.iconHead, { width: s(20), height: s(20), borderRadius: s(10), top: s(12) }]} />
-              <View style={[styles.iconBody, { width: s(35), height: s(35), borderRadius: s(20), bottom: -s(10) }]} />
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          {/* Avatar */}
+          <View style={styles.avatarSection}>
+            <View style={[styles.avatarCircle, { width: s(80), height: s(80), borderRadius: s(40) }]}>
+              <Text style={styles.avatarEmoji}>👤</Text>
+            </View>
+            <Text style={[styles.userName, { fontSize: text(18) }]}>
+              {loading ? 'Cargando...' : `${cuenta?.nombre || 'Usuario'} ${cuenta?.apellido || ''}`}
+            </Text>
+          </View>
+
+          {/* Info Fields */}
+          <View style={styles.infoSection}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIcon}>
+                <Text style={styles.infoEmoji}>🎫</Text>
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>BOLETA</Text>
+                <Text style={[styles.infoValue, { fontSize: text(15) }]}>
+                  {loading ? 'Cargando...' : cuenta?.boleta || 'N/A'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <View style={styles.infoIcon}>
+                <Text style={styles.infoEmoji}>✉️</Text>
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>CORREO</Text>
+                <Text style={[styles.infoValue, { fontSize: text(14) }]}>
+                  {loading ? 'Cargando...' : datos?.correo || 'N/A'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <View style={styles.infoIcon}>
+                <Text style={styles.infoEmoji}>👤</Text>
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>NOMBRE COMPLETO</Text>
+                <Text style={[styles.infoValue, { fontSize: text(15) }]}>
+                  {loading ? 'Cargando...' : `${cuenta?.nombre || 'N/A'} ${cuenta?.apellido || ''}`}
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.infoContainer}>
-            <Text style={[styles.label, { fontSize: text(16) }]}>NOMBRE</Text>
-            <Text style={[styles.value, { fontSize: text(16) }]}>
-              {loading ? 'Cargando...' : `${cuenta?.nombre || 'N/A'} ${cuenta?.apellido || ''}`}
-            </Text>
-
-            <Text style={[styles.label, { fontSize: text(16) }]}>BOLETA</Text>
-            <Text style={[styles.value, { fontSize: text(16) }]}>
-              {loading ? 'Cargando...' : cuenta?.boleta || 'N/A'}
-            </Text>
-
-            <Text style={[styles.label, { fontSize: text(16) }]}>CORREO</Text>
-            <Text style={[styles.value, { fontSize: text(16) }]}>
-              {loading ? 'Cargando...' : datos?.correo || 'N/A'}
-            </Text>
-          </View>
-
+          {/* Logout Button */}
           <TouchableOpacity
             onPress={() => {
               Alert.alert(
@@ -99,30 +129,22 @@ const Cuenta = ({ navigation }) => {
                 ]
               );
             }}
-            style={styles.buttonContainer}
+            style={styles.logoutButton}
+            activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={['#5D2D58', '#C35EB9']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}
-            >
-              <Text style={styles.buttonText}>Cerrar Sesión</Text>
-            </LinearGradient>
+            <Text style={styles.logoutIcon}>🚪</Text>
+            <Text style={[styles.logoutButtonText, { fontSize: text(15) }]}>Cerrar Sesión</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Back Button */}
         <TouchableOpacity
           onPress={() => navigation.navigate('Main')}
-          style={styles.buttonContainer}
+          style={styles.backButton}
+          activeOpacity={0.8}
         >
-          <LinearGradient
-            colors={['#5D2D58', '#C35EB9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            <Text style={styles.buttonText}>Regresar al Menu Principal</Text>
-          </LinearGradient>
+          <Text style={styles.backIcon}>←</Text>
+          <Text style={[styles.backButtonText, { fontSize: text(15) }]}>Regresar al Menú</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -135,90 +157,140 @@ const styles = StyleSheet.create({
     backgroundColor: '#111625',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 30,
+    paddingTop: 50,
+    paddingBottom: 40,
+  },
+  headerSection: {
     alignItems: 'center',
+    marginBottom: 28,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 40,
-    fontFamily: 'Segoe UI',
+    letterSpacing: 0.5,
   },
-  card: {
-    backgroundColor: '#D3D3D3',
-    width: '90%',
-    borderRadius: 20,
-    padding: 25,
-    minHeight: 400,
+  divider: {
+    height: 3,
+    width: 50,
+    backgroundColor: '#C35EB9',
+    borderRadius: 2,
+    marginTop: 12,
   },
-  iconContainer: {
-    marginBottom: 30,
+  profileCard: {
+    backgroundColor: '#1A1F2E',
+    borderRadius: 24,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+    marginBottom: 24,
   },
-  iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#C35EB930',
     borderWidth: 3,
-    borderColor: '#000000',
+    borderColor: '#C35EB9',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
+    marginBottom: 16,
   },
-  iconHead: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#000000',
-    position: 'absolute',
-    top: 12,
+  avatarEmoji: {
+    fontSize: 36,
   },
-  iconBody: {
-    width: 35,
-    height: 35,
-    borderRadius: 20,
-    backgroundColor: '#000000',
-    position: 'absolute',
-    bottom: -10,
-  },
-  infoContainer: {
-    width: '100%',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginTop: 15,
-    marginBottom: 5,
-    fontFamily: 'Segoe UI',
-  },
-  value: {
-    fontSize: 16,
-    color: '#000000',
-    marginBottom: 10,
-    fontFamily: 'Segoe UI',
-  },
-  buttonContainer: {
-    width: '80%',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  gradientButton: {
-    borderRadius: 20,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
+  userName: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '350',
-    fontFamily: 'Segoe UI',
+    textAlign: 'center',
+  },
+  infoSection: {
+    marginBottom: 24,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#252A3D',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#353A4D',
+  },
+  infoIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#C35EB920',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  infoEmoji: {
+    fontSize: 20,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC262620',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  logoutIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  logoutButtonText: {
+    color: '#DC2626',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C35EB9',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  backIcon: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 
