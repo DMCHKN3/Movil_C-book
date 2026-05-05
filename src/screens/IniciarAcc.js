@@ -1,105 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, ActivityIndicator, BackHandler } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Alert, ActivityIndicator, BackHandler, ScrollView, StatusBar,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
 import { iniciarSesionConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import SlideToUnlock from 'react-native-slide-to-unlock';
 
 const IniciarSesion = ({ navigation }) => {
   const { login } = useUser();
+  const { theme, isDark, toggleTheme } = useTheme();
   const [correo, setCorreo] = useState('');
   const [contra, setContra] = useState('');
-  const [loggedIn, setLoggedIn] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [mantenerSesion, setMantenerSesion] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { s, vs, ms, text } = useScale();
   const [captchaVerif, setCaptchaVerif] = useState(false);
+  const { s, vs, text } = useScale();
 
-  // Bloquear botón de retroceso para evitar acceder a sesión anterior
   useFocusEffect(
     React.useCallback(() => {
-      const onBackPress = () => {
-        // Retornar true bloquea la navegación hacia atrás
-        // pero NO bloquea minimizar/salir de la app
-        return true;
-      };
-
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () => subscription.remove();
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+      return () => sub.remove();
     }, [])
   );
 
   const handleLogin = async () => {
-    if (isLoading) return; // Prevenir múltiples clicks
-
+    if (isLoading) return;
     if (!captchaVerif) {
-      Alert.alert('Verificación requerida', 'Por favor completa la verificación de captcha deslizando el control.');
+      Alert.alert('Verificación requerida', 'Por favor completa la verificación deslizando el control.');
       return;
-      setCaptchaVerif(false);
     }
-    
     setIsLoading(true);
-
     try {
-      // Iniciar sesión con Supabase Auth
       const resultado = await iniciarSesionConAuth(correo, contra);
-
       if (resultado.ok) {
-        setLoggedIn(true);
-        // Guardar usuario en el contexto
         login(resultado.user, resultado.perfil);
-
-        // Guardar sesión si está marcada la opción
         if (mantenerSesion) {
-          try {
-            await AsyncStorage.setItem('userSession', JSON.stringify({
-              user: resultado.user,
-              perfil: resultado.perfil,
-              session: resultado.session,
-              timestamp: Date.now()
-            }));
-            console.log('Sesión guardada permanentemente');
-          } catch (error) {
-            console.error('Error guardando sesión:', error);
-          }
+          await AsyncStorage.setItem('userSession', JSON.stringify({
+            user: resultado.user,
+            perfil: resultado.perfil,
+            session: resultado.session,
+            timestamp: Date.now(),
+          }));
         }
-
-        Alert.alert(
-          'Éxito',
-          'Sesión iniciada correctamente',
-          [{
-            text: 'OK',
-            onPress: () => {
-              setCorreo('');
-              setContra('');
-              navigation.navigate('Main');
-            }
-          }]
-        );
+        Alert.alert('Éxito', 'Sesión iniciada correctamente', [{
+          text: 'OK',
+          onPress: () => { setCorreo(''); setContra(''); navigation.navigate('Main'); },
+        }]);
       } else {
-        // Mostrar error y opción de reenviar correo si no está confirmado
         if (resultado.needsEmailConfirmation) {
-          Alert.alert(
-            'Correo no confirmado',
-            resultado.message,
-            [
-              { text: 'Cancelar', style: 'cancel' },
-              {
-                text: 'Reenviar correo',
-                onPress: () => handleReenviarCorreo(correo)
-              }
-            ]
-          );
+          Alert.alert('Correo no confirmado', resultado.message, [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Reenviar correo', onPress: () => handleReenviarCorreo(correo) },
+          ]);
         } else {
           Alert.alert('Error', resultado.message || 'Error al iniciar sesión');
         }
       }
-    } catch (error) {
-      console.error('Error en handleLogin:', error);
+    } catch {
       Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
     } finally {
       setIsLoading(false);
@@ -107,299 +70,193 @@ const IniciarSesion = ({ navigation }) => {
   };
 
   const handleReenviarCorreo = async (email) => {
-    if (!email) {
-      Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
-      return;
-    }
-
+    if (!email) { Alert.alert('Error', 'Por favor ingresa tu correo'); return; }
     setIsLoading(true);
-
     try {
-      const resultado = await reenviarConfirmacion(email);
-
-      if (resultado.ok) {
-        Alert.alert('Éxito', resultado.message || 'Correo de confirmación reenviado exitosamente');
-      } else {
-        Alert.alert('Error', resultado.message || 'Error al reenviar el correo de confirmación');
-      }
-    } catch (error) {
-      console.error('Error reenviando correo:', error);
+      const res = await reenviarConfirmacion(email);
+      Alert.alert(res.ok ? 'Éxito' : 'Error', res.message || (res.ok ? 'Correo reenviado' : 'Error al reenviar'));
+    } catch {
       Alert.alert('Error', 'Ocurrió un error al reenviar el correo');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const t = theme;
+
   return (
-    <ImageBackground
-      source={require('../../assets/fondo.png')}
-      style={styles.container}
-      resizeMode="cover"
-    >
-      <View style={[styles.formContainer, { paddingHorizontal: s(30) }]}>
-        {/* Header */}
-        <View style={styles.headerContainer}>
-          <Text style={[styles.title, { fontSize: text(28) }]}>Iniciar Sesión</Text>
-          <View style={styles.titleUnderline} />
-        </View>
+    <View style={[styles.root, { backgroundColor: t.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
 
-        {/* Input Fields */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Correo Electrónico</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>✉️</Text>
-            <TextInput
-              style={[styles.input, { fontSize: text(15) }]}
-              placeholder="ejemplo@correo.com"
-              placeholderTextColor="#6B7280"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={correo}
-              onChangeText={setCorreo}
-            />
+      {/* Theme toggle */}
+      <TouchableOpacity style={styles.themeBtn} onPress={toggleTheme}>
+        <Text style={[styles.themeBtnText, { color: t.textMuted }]}>{isDark ? '☀' : '⏾'}</Text>
+      </TouchableOpacity>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Logo / Branding */}
+        <View style={styles.brandSection}>
+          <View style={[styles.logoBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
+            <Text style={styles.logoEmoji}>📚</Text>
           </View>
+          <Text style={[styles.appName, { color: t.textPrimary }]}>C-Book</Text>
+          <Text style={[styles.appTagline, { color: t.textMuted }]}>Sistema de biblioteca</Text>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Contraseña</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>🔒</Text>
-            <TextInput
-              style={[styles.input, { fontSize: text(15) }]}
-              placeholder="Tu contraseña"
-              placeholderTextColor="#6B7280"
-              secureTextEntry={!mostrarContrasena}
-              value={contra}
-              onChangeText={setContra}
-            />
-          </View>
-        </View>
+        {/* Card */}
+        <View style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+          <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Iniciar Sesión</Text>
+          <View style={[styles.titleBar, { backgroundColor: t.divider }]} />
 
-        {/* Checkboxes */}
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => setMostrarContrasena(!mostrarContrasena)}
-          >
-            <View style={[styles.checkbox, mostrarContrasena && styles.checkboxChecked]}>
-              {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+          {/* Correo */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: t.textMuted }]}>CORREO ELECTRÓNICO</Text>
+            <View style={[styles.inputWrap, { backgroundColor: t.bgInput, borderColor: t.border }]}>
+              <Text style={styles.inputIcon}>✉</Text>
+              <TextInput
+                style={[styles.input, { color: t.textPrimary, fontSize: text(15) }]}
+                placeholder="ejemplo@correo.com"
+                placeholderTextColor={t.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={correo}
+                onChangeText={setCorreo}
+              />
             </View>
-            <Text style={[styles.checkboxLabel, { fontSize: text(13) }]}>Mostrar contraseña</Text>
+          </View>
+
+          {/* Contraseña */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: t.textMuted }]}>CONTRASEÑA</Text>
+            <View style={[styles.inputWrap, { backgroundColor: t.bgInput, borderColor: t.border }]}>
+              <Text style={styles.inputIcon}>🔒</Text>
+              <TextInput
+                style={[styles.input, { color: t.textPrimary, fontSize: text(15) }]}
+                placeholder="Tu contraseña"
+                placeholderTextColor={t.textMuted}
+                secureTextEntry={!mostrarContrasena}
+                value={contra}
+                onChangeText={setContra}
+              />
+            </View>
+          </View>
+
+          {/* Opciones */}
+          <View style={styles.optionsRow}>
+            <TouchableOpacity style={styles.checkRow} onPress={() => setMostrarContrasena(!mostrarContrasena)}>
+              <View style={[styles.checkbox, { borderColor: t.accent }, mostrarContrasena && { backgroundColor: t.accent }]}>
+                {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={[styles.checkLabel, { color: t.textSecondary, fontSize: text(12) }]}>Mostrar contraseña</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.checkRow} onPress={() => setMantenerSesion(!mantenerSesion)}>
+              <View style={[styles.checkbox, { borderColor: t.accent }, mantenerSesion && { backgroundColor: t.accent }]}>
+                {mantenerSesion && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={[styles.checkLabel, { color: t.textSecondary, fontSize: text(12) }]}>Mantener sesión</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Captcha */}
+          <SlideToUnlock
+            onEndReached={() => setCaptchaVerif(true)}
+            containerStyle={[styles.captcha, { backgroundColor: t.bgInput, borderColor: t.border, height: vs(56) }]}
+            sliderElement={
+              <View style={[styles.slider, { backgroundColor: t.btnPrimary }]}>
+                <Text style={[styles.sliderArrow, { fontSize: text(18) }]}>→</Text>
+              </View>
+            }
+          >
+            <Text style={[styles.captchaText, { color: t.textMuted, fontSize: text(13) }]}>
+              {captchaVerif ? '✓  Verificado' : 'Desliza para verificar'}
+            </Text>
+          </SlideToUnlock>
+
+          {/* Botón principal */}
+          <TouchableOpacity
+            style={[styles.btnPrimary, { backgroundColor: t.btnPrimary }, isLoading && styles.btnDisabled]}
+            onPress={handleLogin}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            {isLoading
+              ? <ActivityIndicator color={t.btnPrimaryText} size="small" />
+              : <Text style={[styles.btnPrimaryText, { color: t.btnPrimaryText, fontSize: text(15) }]}>Iniciar Sesión</Text>}
           </TouchableOpacity>
 
+          {/* Botón secundario */}
           <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => setMantenerSesion(!mantenerSesion)}
+            style={[styles.btnSecondary, { borderColor: t.btnSecondaryBorder }]}
+            onPress={() => navigation.navigate('CrearAcc')}
+            activeOpacity={0.85}
           >
-            <View style={[styles.checkbox, mantenerSesion && styles.checkboxChecked]}>
-              {mantenerSesion && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={[styles.checkboxLabel, { fontSize: text(13) }]}>Mantener sesión</Text>
+            <Text style={[styles.btnSecondaryText, { color: t.btnSecondaryText, fontSize: text(15) }]}>Crear nueva cuenta</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Captcha */}
-        <SlideToUnlock
-          onEndReached={() => {
-            setCaptchaVerif(true);
-          }}
-          containerStyle={[styles.captchaBox, { height: vs(60) }]}
-          sliderElement={
-            <View style={styles.sliderButton}>
-              <Text style={[styles.sliderText, { fontSize: text(20) }]}>→</Text>
-            </View>
-          }
-        >
-          <Text style={[styles.captchaText, { fontSize: text(13) }]}>
-            {captchaVerif ? <Text style={{ fontWeight: 'bold' }}>✓ Verificado</Text> : 'Desliza para verificar'}
-          </Text>
-        </SlideToUnlock>
-
-        {/* Buttons */}
-        <TouchableOpacity
-          onPress={handleLogin}
-          style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Text style={[styles.primaryButtonText, { fontSize: text(16) }]}>Iniciar Sesión</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('CrearAcc')}
-          style={styles.secondaryButton}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.secondaryButtonText, { fontSize: text(15) }]}>Crear nueva cuenta</Text>
-        </TouchableOpacity>
-      </View>
-    </ImageBackground>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#111625',
-    justifyContent: 'center',
+  root: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 },
+  themeBtn: { position: 'absolute', top: 52, right: 24, zIndex: 10, padding: 8 },
+  themeBtnText: { fontSize: 22 },
+  brandSection: { alignItems: 'center', marginBottom: 32 },
+  logoBox: {
+    width: 64, height: 64, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, marginBottom: 14,
   },
-  formContainer: {
-    backgroundColor: 'rgba(17, 22, 37, 0.92)',
-    marginHorizontal: 20,
-    borderRadius: 24,
-    padding: 28,
+  logoEmoji: { fontSize: 30 },
+  appName: { fontSize: 26, fontWeight: '700', letterSpacing: 0.5 },
+  appTagline: { fontSize: 13, marginTop: 4 },
+  card: {
+    borderRadius: 20, padding: 28,
     borderWidth: 1,
-    borderColor: '#353A4D',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15, shadowRadius: 20, elevation: 8,
   },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
+  cardTitle: { fontSize: 22, fontWeight: '700', textAlign: 'center', letterSpacing: 0.3 },
+  titleBar: { width: 40, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 28 },
+  inputGroup: { marginBottom: 18 },
+  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 8, marginLeft: 2 },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, borderWidth: 1, paddingHorizontal: 14,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  titleUnderline: {
-    height: 3,
-    width: 50,
-    backgroundColor: '#C35EB9',
-    borderRadius: 2,
-    marginTop: 10,
-  },
-  inputGroup: {
-    marginBottom: 18,
-  },
-  inputLabel: {
-    color: '#9CA3AF',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 8,
-    marginLeft: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1E2333',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#353A4D',
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: 52,
-    color: '#FFFFFF',
-    fontSize: 15,
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    marginTop: 4,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  inputIcon: { fontSize: 15, marginRight: 10 },
+  input: { flex: 1, height: 50 },
+  optionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  checkRow: { flexDirection: 'row', alignItems: 'center' },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#C35EB9',
-    backgroundColor: 'transparent',
-    marginRight: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 18, height: 18, borderRadius: 5,
+    borderWidth: 2, marginRight: 8,
+    alignItems: 'center', justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: '#C35EB9',
+  checkmark: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  checkLabel: { fontWeight: '500' },
+  captcha: {
+    width: '100%', borderRadius: 12, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 20, overflow: 'hidden',
   },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+  captchaText: { fontWeight: '600', textAlign: 'center' },
+  slider: { width: 48, height: '100%', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  sliderArrow: { color: '#fff', fontWeight: 'bold' },
+  btnPrimary: {
+    height: 52, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
-  checkboxLabel: {
-    color: '#9CA3AF',
-    fontSize: 13,
+  btnPrimaryText: { fontWeight: '700', letterSpacing: 0.3 },
+  btnSecondary: {
+    height: 52, borderRadius: 12, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
   },
-  captchaBox: {
-    width: '100%',
-    height: 60,
-    borderRadius: 14,
-    backgroundColor: '#1E2333',
-    borderWidth: 1,
-    borderColor: '#353A4D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  captchaText: {
-    color: '#9CA3AF',
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  sliderButton: {
-    width: 50,
-    height: '100%',
-    backgroundColor: '#C35EB9',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sliderText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  primaryButton: {
-    width: '100%',
-    height: 52,
-    backgroundColor: '#C35EB9',
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  secondaryButton: {
-    width: '100%',
-    height: 52,
-    backgroundColor: 'transparent',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#C35EB9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: '#C35EB9',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+  btnSecondaryText: { fontWeight: '600' },
+  btnDisabled: { opacity: 0.55 },
 });
 
 export default IniciarSesion;

@@ -1,9 +1,9 @@
-// src/navigation/AppNavigator.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 
 import IniciarSesion from '../screens/IniciarAcc';
 import CrearCuenta from '../screens/CrearAcc';
@@ -16,20 +16,21 @@ const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
   const { isAuthenticated, isLoading } = useUser();
+  const { theme } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#C35EB9" />
+      <View style={[styles.loadingContainer, { backgroundColor: theme.bg }]}>
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
 
-  const initialRouteName = isAuthenticated() ? "Main" : "IniciarAcc";
+  const initialRouteName = isAuthenticated() ? 'Main' : 'IniciarAcc';
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{headerShown: false,}}>
+      <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="IniciarAcc" component={IniciarSesion} />
         <Stack.Screen name="CrearAcc" component={CrearCuenta} />
         <Stack.Screen name="Main" component={Main} />
@@ -46,7 +47,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#111625',
   },
 });
 

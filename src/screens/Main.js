@@ -1,533 +1,284 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, BackHandler, Alert, Dimensions } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  ActivityIndicator, BackHandler, Alert, Dimensions, StatusBar,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import { getEstadoGral } from '../../tablas/estado_gral';
 import { getRecientes } from '../../tablas/actvs_rec';
 
 const { width } = Dimensions.get('window');
 
+const statusColor = (estado) => {
+  switch (estado) {
+    case 1: return '#d97706';
+    case 2: return '#1f9d74';
+    case 3: return '#dc4c3f';
+    case 4: return '#dc4c3f';
+    default: return '#738296';
+  }
+};
+
+const statusLabel = (estado) => {
+  switch (estado) {
+    case 1: return 'Pendiente';
+    case 2: return 'Aprobado';
+    case 3: return 'Rechazado';
+    case 4: return 'Cancelada';
+    default: return estado || 'Desconocido';
+  }
+};
+
+const tipoLabel = (tipo) => {
+  switch (tipo) {
+    case 'libro': return 'Préstamo de libro';
+    case 'restirador': return 'Préstamo de restirador';
+    case 'computadora': return 'Préstamo de computadora';
+    default: return tipo || 'Tipo desconocido';
+  }
+};
+
 const Main = ({ navigation }) => {
   const { s, vs, ms, text } = useScale();
-  const cardWidth = s(200);
   const { getUserBoleta, isAuthenticated, perfil, logout } = useUser();
+  const { theme, isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [estadoGral, setEstadoGral] = useState([]);
   const [recientes, setRecientes] = useState([]);
   const registro_id = getUserBoleta();
+  const cardWidth = s(180);
+  const t = theme;
 
-  // Interceptar botón de retroceso para mostrar alerta de cerrar sesión
   useFocusEffect(
     React.useCallback(() => {
-      const onBackPress = () => {
-        Alert.alert(
-          'Cerrar sesión',
-          '¿Deseas cerrar sesión?',
-          [
-            {
-              text: 'Cancelar',
-              style: 'cancel',
-              onPress: () => {}
+      const onBack = () => {
+        Alert.alert('Cerrar sesión', '¿Deseas cerrar sesión?', [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Cerrar sesión',
+            onPress: async () => {
+              await logout();
+              navigation.reset({ index: 0, routes: [{ name: 'IniciarAcc' }] });
             },
-            {
-              text: 'Cerrar sesión',
-              onPress: async () => {
-                await logout();
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'IniciarAcc' }],
-                });
-              }
-            }
-          ],
-          { cancelable: false }
-        );
-        return true; // Bloquear navegación hacia atrás
+          },
+        ], { cancelable: false });
+        return true;
       };
-
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () => subscription.remove();
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+      return () => sub.remove();
     }, [logout, navigation])
   );
 
-  // Función para convertir el estado booleano a texto descriptivo
-  const formatearEstado = (estado) => {
-    switch (estado) {
-      case 1:
-        return 'Pendiente';
-      case 2:
-        return 'Aprobado';
-      case 3:
-        return 'Rechazado';
-      case 4:
-        return 'Cancelada';
-      default:
-        return estado || 'Estado desconocido';
-    }
-  };
-
-  const formatearColor = (estado) => {
-    switch (estado) {
-      case 1:
-        return 'orange';
-      case 2:
-        return 'green';
-      case 3:
-        return 'red';
-      case 4:
-        return 'red';
-      default:
-        return 'black';
-    }
-  };
-
-  const formatearTipo = (tipo) => {
-    switch (tipo) {
-      case 'libro':
-        return 'Préstamo de libro';
-      case 'restirador':
-        return 'Préstamo de restirador';
-      case 'computadora':
-        return 'Préstamo de computadora';
-      default:
-        return tipo || 'Tipo desconocido';
-    }
-  };
-
   useEffect(() => {
     const fetchData = async () => {
-      if (!isAuthenticated() || !registro_id) {
-        console.warn('Usuario no autenticado o sin boleta');
-        setLoading(false);
-        return;
-      }
-      
+      if (!isAuthenticated() || !registro_id) { setLoading(false); return; }
       try {
         setLoading(true);
-        // Ejecutar ambas consultas en paralelo para mejor rendimiento
         const [estadoData, recientesData] = await Promise.all([
           getEstadoGral(registro_id),
-          getRecientes(registro_id)
+          getRecientes(registro_id),
         ]);
-        
         setEstadoGral(estadoData);
         setRecientes(recientesData);
-      } catch (error) {
-        console.error('Error cargando datos:', error);
+      } catch (err) {
+        console.error('Error cargando datos:', err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [registro_id]);
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <View style={styles.loaderCard}>
-          <ActivityIndicator size="large" color="#C35EB9" />
-          <Text style={styles.loadingText}>Cargando datos...</Text>
+      <View style={[styles.center, { backgroundColor: t.bg }]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+        <View style={[styles.loaderCard, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+          <ActivityIndicator size="large" color={t.accent} />
+          <Text style={[styles.loaderText, { color: t.textSecondary }]}>Cargando datos...</Text>
         </View>
       </View>
     );
   }
 
-
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
-        {/* Header Section */}
-        <View style={styles.headerSection}>
-          <Text style={[styles.bienvenida, { fontSize: text(28) }]} allowFontScaling>
-            ¡Hola de nuevo!
-          </Text>
-          <Text style={[styles.usuario, { fontSize: text(22), marginBottom: vs(8) }]} allowFontScaling>
-            {perfil ? `${perfil.correo.split('@')[0]}` : 'Usuario'}
-          </Text>
-          <View style={styles.divider} />
-        </View>
+    <View style={[styles.root, { backgroundColor: t.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
 
-        {/* Actividades Recientes Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Text style={styles.iconText}>📋</Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Text style={[styles.greeting, { color: t.textMuted, fontSize: text(14) }]}>¡Hola de nuevo!</Text>
+              <Text style={[styles.username, { color: t.textPrimary, fontSize: text(22) }]}>
+                {perfil ? perfil.correo.split('@')[0] : 'Usuario'}
+              </Text>
             </View>
-            <Text style={[styles.actividadesLabel, { fontSize: text(16) }]} allowFontScaling>
-              Actividades Recientes
-            </Text>
+            <TouchableOpacity
+              style={[styles.themeBtn, { backgroundColor: t.accentBg, borderColor: t.border }]}
+              onPress={toggleTheme}
+            >
+              <Text style={{ fontSize: 18 }}>{isDark ? '☀' : '⏾'}</Text>
+            </TouchableOpacity>
           </View>
+          <View style={[styles.divider, { backgroundColor: t.divider }]} />
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.rowScroll}
-            pagingEnabled={false}
-          >
-            {recientes.length === 0 ? (
-              <View style={[styles.caja, { width: cardWidth }]}>
-                <View style={styles.emptyStateIcon}>
-                  <Text style={styles.emptyIcon}>📭</Text>
-                </View>
-                <Text style={[styles.cajaTextoEmpty, { fontSize: text(14) }]} allowFontScaling>
-                  Sin actividades recientes
-                </Text>
+          {/* Actividades recientes */}
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <View style={[styles.sectionIconBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
+                <Text style={styles.sectionEmoji}>📋</Text>
               </View>
-            ) : (
-              recientes.slice(0, 5).map((actividad, index) => (
-                <View key={index} style={[styles.caja, { width: cardWidth }]}>
-                  <View style={styles.cardHeader}>
-                    <View style={[styles.statusDot, { backgroundColor: formatearColor(actividad.estado) }]} />
-                    <Text style={[styles.cardType, { fontSize: text(11) }]} allowFontScaling>
-                      {formatearTipo(actividad.tipo)}
-                    </Text>
-                  </View>
-                  <View style={styles.cardContent}>
-                    <Text style={[styles.cajaEstado, { fontSize: text(13) }]} allowFontScaling>
-                      Estado
-                    </Text>
-                    <Text style={[styles.estadoValue, { fontSize: text(16), color: formatearColor(actividad.estado) }]} allowFontScaling>
-                      {formatearEstado(actividad.estado)}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </ScrollView>
-        </View>
-
-        {/* Estado General Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Text style={styles.iconText}>📊</Text>
-            </View>
-            <Text style={[styles.estadoLabel, { fontSize: text(16) }]} allowFontScaling>
-              Estado General
-            </Text>
-          </View>
-
-          <View style={styles.table}>
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.tableHeader, styles.column]}>Solicitud</Text>
-              <Text style={[styles.tableHeader, styles.column]}>Fecha</Text>
-              <Text style={[styles.tableHeader, styles.column]}>Estado</Text>
+              <Text style={[styles.sectionTitle, { color: t.textPrimary, fontSize: text(15) }]}>Actividades Recientes</Text>
             </View>
 
-            {estadoGral.length === 0 ? (
-              <View style={styles.emptyTableRow}>
-                <Text style={styles.emptyTableText}>No hay solicitudes</Text>
-              </View>
-            ) : (
-              estadoGral.map((estado, index) => (
-                <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowAlt]}>
-                  <Text style={[styles.tableCell, styles.column, { fontSize: text(11) }]}>{formatearTipo(estado.tipo)}</Text>
-                  <Text style={[styles.tableCell, styles.column, { fontSize: text(11) }]}>{estado.fecha_solicitud || 'N/A'}</Text>
-                  <View style={[styles.column, styles.statusCell]}>
-                    <View style={[styles.statusBadge, { backgroundColor: formatearColor(estado.estado) + '20' }]}>
-                      <Text style={[styles.statusText, { fontSize: text(10), color: formatearColor(estado.estado) }]}>
-                        {formatearEstado(estado.estado)}
-                      </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRow}>
+              {recientes.length === 0 ? (
+                <View style={[styles.actCard, styles.emptyCard, { width: cardWidth, backgroundColor: t.bgCard, borderColor: t.border }]}>
+                  <Text style={styles.emptyEmoji}>📭</Text>
+                  <Text style={[styles.emptyText, { color: t.textMuted, fontSize: text(13) }]}>Sin actividades recientes</Text>
+                </View>
+              ) : (
+                recientes.slice(0, 5).map((act, i) => {
+                  const color = statusColor(act.estado);
+                  return (
+                    <View key={i} style={[styles.actCard, { width: cardWidth, backgroundColor: t.bgCard, borderColor: t.border }]}>
+                      <View style={styles.actCardTop}>
+                        <View style={[styles.dot, { backgroundColor: color }]} />
+                        <Text style={[styles.actType, { color: t.textMuted, fontSize: text(10) }]} numberOfLines={1}>
+                          {tipoLabel(act.tipo)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.actStateLabel, { color: t.textMuted, fontSize: text(11) }]}>Estado</Text>
+                      <Text style={[styles.actStateValue, { color, fontSize: text(15) }]}>{statusLabel(act.estado)}</Text>
                     </View>
-                  </View>
-                </View>
-              ))
-            )}
+                  );
+                })
+              )}
+            </ScrollView>
           </View>
+
+          {/* Estado general */}
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <View style={[styles.sectionIconBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
+                <Text style={styles.sectionEmoji}>📊</Text>
+              </View>
+              <Text style={[styles.sectionTitle, { color: t.textPrimary, fontSize: text(15) }]}>Estado General</Text>
+            </View>
+
+            <View style={[styles.table, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+              <View style={[styles.tableHead, { backgroundColor: t.bgCardAlt, borderBottomColor: t.border }]}>
+                {['Solicitud', 'Fecha', 'Estado'].map((h) => (
+                  <Text key={h} style={[styles.thCell, { color: t.textMuted, flex: h === 'Solicitud' ? 1.4 : 1, fontSize: text(10) }]}>{h}</Text>
+                ))}
+              </View>
+
+              {estadoGral.length === 0 ? (
+                <View style={styles.emptyTableRow}>
+                  <Text style={[styles.emptyText, { color: t.textMuted }]}>No hay solicitudes</Text>
+                </View>
+              ) : (
+                estadoGral.map((row, i) => {
+                  const color = statusColor(row.estado);
+                  return (
+                    <View key={i} style={[styles.tableRow, { borderBottomColor: t.border }, i % 2 !== 0 && { backgroundColor: t.bgCardAlt }]}>
+                      <Text style={[styles.tdCell, { color: t.textSecondary, flex: 1.4, fontSize: text(10) }]} numberOfLines={2}>
+                        {tipoLabel(row.tipo)}
+                      </Text>
+                      <Text style={[styles.tdCell, { color: t.textSecondary, flex: 1, fontSize: text(10) }]}>
+                        {row.fecha_solicitud || 'N/A'}
+                      </Text>
+                      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                        <View style={[styles.badge, { backgroundColor: color + '22' }]}>
+                          <Text style={[styles.badgeText, { color, fontSize: text(9) }]}>{statusLabel(row.estado)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </View>
+
+          {/* Navegación */}
+          <View style={styles.navButtons}>
+            {[
+              { label: 'Biblioteca', icon: '📚', screen: 'Biblioteca' },
+              { label: 'Préstamos', icon: '📝', screen: 'Prestamos' },
+              { label: 'Mi Cuenta', icon: '👤', screen: 'Cuenta' },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.screen}
+                style={[styles.navBtn, { backgroundColor: t.bgCard, borderColor: t.border }]}
+                onPress={() => navigation.navigate(item.screen)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.navIconBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
+                  <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                </View>
+                <Text style={[styles.navLabel, { color: t.textPrimary, fontSize: text(14) }]}>{item.label}</Text>
+                <Text style={[styles.navArrow, { color: t.accentBright }]}>›</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
         </View>
-
-        {/* Navigation Buttons */}
-        <View style={styles.buttonsContainer}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Biblioteca')}
-            style={styles.navButton}
-            activeOpacity={0.8}
-          >
-            <View style={styles.navButtonIcon}>
-              <Text style={styles.navIcon}>📚</Text>
-            </View>
-            <Text style={[styles.navButtonText, { fontSize: text(14) }]}>Biblioteca</Text>
-            <Text style={styles.arrowIcon}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Prestamos')}
-            style={styles.navButton}
-            activeOpacity={0.8}
-          >
-            <View style={styles.navButtonIcon}>
-              <Text style={styles.navIcon}>📝</Text>
-            </View>
-            <Text style={[styles.navButtonText, { fontSize: text(14) }]}>Préstamos</Text>
-            <Text style={styles.arrowIcon}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Cuenta')}
-            style={styles.navButton}
-            activeOpacity={0.8}
-          >
-            <View style={styles.navButtonIcon}>
-              <Text style={styles.navIcon}>👤</Text>
-            </View>
-            <Text style={[styles.navButtonText, { fontSize: text(14) }]}>Mi Cuenta</Text>
-            <Text style={styles.arrowIcon}>›</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1A1F2E',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1A1F2E',
-  },
-  loaderCard: {
-    backgroundColor: '#252A3D',
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  headerSection: {
-    marginBottom: 24,
-  },
-  bienvenida: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: '#9CA3AF',
-    letterSpacing: 0.5,
-  },
-  usuario: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  divider: {
-    height: 3,
-    width: 60,
-    backgroundColor: '#C35EB9',
-    borderRadius: 2,
-    marginTop: 12,
-  },
-  sectionContainer: {
-    marginBottom: 28,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#252A3D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  iconText: {
-    fontSize: 18,
-  },
-  actividadesLabel: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  rowScroll: {
-    paddingVertical: 4,
-    paddingRight: 20,
-    gap: 14,
-  },
-  caja: {
-    backgroundColor: '#252A3D',
-    height: 130,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#353A4D',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  cardType: {
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  cardContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  cajaEstado: {
-    color: '#6B7280',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  estadoValue: {
-    fontWeight: '700',
-  },
-  emptyStateIcon: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  emptyIcon: {
-    fontSize: 32,
-    opacity: 0.6,
-  },
-  cajaTextoEmpty: {
-    color: '#6B7280',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  estadoLabel: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  table: {
-    width: '100%',
-    backgroundColor: '#252A3D',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#353A4D',
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: '#1E2333',
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 52,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#353A4D',
-  },
-  tableRowAlt: {
-    backgroundColor: '#1E233310',
-  },
-  tableHeader: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tableCell: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    textAlign: 'center',
-    fontWeight: '400',
-  },
-  column: {
-    flex: 1,
-    paddingHorizontal: 4,
-  },
-  statusCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  emptyTableRow: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyTableText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  buttonsContainer: {
-    marginTop: 8,
-    gap: 12,
-  },
-  navButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#252A3D',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#353A4D',
-  },
-  navButtonIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#C35EB920',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  navIcon: {
-    fontSize: 22,
-  },
-  navButtonText: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  arrowIcon: {
-    color: '#C35EB9',
-    fontSize: 24,
-    fontWeight: '300',
-  },
+  root: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loaderCard: { borderRadius: 20, padding: 40, alignItems: 'center', borderWidth: 1 },
+  loaderText: { marginTop: 14, fontSize: 15, fontWeight: '500' },
+
+  content: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 40 },
+
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  headerLeft: { flex: 1 },
+  greeting: { fontWeight: '400', letterSpacing: 0.3 },
+  username: { fontWeight: '700', letterSpacing: 0.2, marginTop: 2 },
+  themeBtn: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  divider: { height: 2, borderRadius: 2, marginBottom: 28 },
+
+  section: { marginBottom: 28 },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  sectionIconBox: { width: 34, height: 34, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  sectionEmoji: { fontSize: 16 },
+  sectionTitle: { fontWeight: '600', letterSpacing: 0.2 },
+
+  cardsRow: { paddingVertical: 4, paddingRight: 20, gap: 12 },
+  actCard: { borderRadius: 16, padding: 16, borderWidth: 1, height: 120, justifyContent: 'space-between' },
+  emptyCard: { alignItems: 'center', justifyContent: 'center', height: 100 },
+  actCardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  actType: { fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, flex: 1 },
+  actStateLabel: { fontWeight: '500' },
+  actStateValue: { fontWeight: '700' },
+  emptyEmoji: { fontSize: 28, marginBottom: 8, opacity: 0.6 },
+  emptyText: { fontWeight: '500', textAlign: 'center' },
+
+  table: { borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
+  tableHead: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1 },
+  thCell: { fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.4 },
+  tableRow: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingVertical: 10, paddingHorizontal: 10, borderBottomWidth: 1 },
+  tdCell: { textAlign: 'center', paddingHorizontal: 2 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  badgeText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  emptyTableRow: { padding: 24, alignItems: 'center' },
+
+  navButtons: { gap: 10 },
+  navBtn: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 14, borderWidth: 1 },
+  navIconBox: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  navLabel: { flex: 1, fontWeight: '600' },
+  navArrow: { fontSize: 24, fontWeight: '300' },
 });
 
 export default Main;

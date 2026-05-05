@@ -1,345 +1,185 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Alert, ActivityIndicator, ScrollView, StatusBar,
+} from 'react-native';
 import useScale from '../hooks/useScale';
 import { crearCuentaConAuth, reenviarConfirmacion, insertTablaUsuarios } from '../../BD/supabaseAuthService';
+import { useTheme } from '../context/ThemeContext';
 
 const CrearCuenta = ({ navigation }) => {
+  const { theme, isDark, toggleTheme } = useTheme();
   const { s, vs, text } = useScale();
   const [user, setUser] = useState('');
   const [contra, setContra] = useState('');
   const [repcontra, setRepContra] = useState('');
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [correo, setCorreo] = useState('');
-  const [crearc, setCrearc] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [correoParaReenvio, setCorreoParaReenvio] = useState('');
 
-const handleCrearCuenta = async () => {
-  if (isLoading) return; // Prevenir múltiples clicks
-  
-  setIsLoading(true);
-  
-  try {
-    // 1. Crear cuenta con Supabase Auth (con validación local)
-    const resultado = await crearCuentaConAuth(user, correo, contra, repcontra);
-    // 2. Si la cuenta Auth se creó exitosamente, insertar en tabla personalizada
-    const tablaPersonal = await insertTablaUsuarios(user, correo);
-    
-    if (!resultado.ok && !tablaPersonal.ok) {
-      console.error('Error creando cuenta y en tabla personalizada:', resultado.message, tablaPersonal.message);
-      Alert.alert('Error', 'Ocurrió un error al crear la cuenta. Intenta nuevamente.');
-      return;
-    } else if (!resultado.ok) {
-      console.error('Error creando cuenta:', resultado.message);
-      Alert.alert('Error', resultado.message || 'Ocurrió un error al crear la cuenta. Intenta nuevamente.');
-      return;
-    } else if (!tablaPersonal.ok) {
-      console.error('Error en tabla personalizada:', tablaPersonal.message);
-      Alert.alert('Error', 'Cuenta creada pero ocurrió un error al guardar datos adicionales. Contacta soporte.');
-      return;
+  const handleCrearCuenta = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      const resultado = await crearCuentaConAuth(user, correo, contra, repcontra);
+      const tablaPersonal = await insertTablaUsuarios(user, correo);
+
+      if (!resultado.ok && !tablaPersonal.ok) {
+        Alert.alert('Error', 'Ocurrió un error al crear la cuenta. Intenta nuevamente.');
+        return;
+      } else if (!resultado.ok) {
+        Alert.alert('Error', resultado.message || 'Error al crear la cuenta.');
+        return;
+      } else if (!tablaPersonal.ok) {
+        Alert.alert('Error', 'Cuenta creada pero ocurrió un error al guardar datos adicionales.');
+        return;
+      }
+
+      setCorreoParaReenvio(correo);
+      Alert.alert(
+        'Éxito',
+        resultado.message || 'Cuenta creada. Revisa tu correo para verificar tu cuenta.',
+        [
+          { text: 'OK', onPress: () => { setUser(''); setContra(''); setRepContra(''); setCorreo(''); navigation.navigate('IniciarAcc'); } },
+          { text: '¿No recibiste el correo?', onPress: () => handleReenviarCorreo(correo), style: 'cancel' },
+        ]
+      );
+    } catch {
+      Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    // 3. Ambas operaciones exitosas
-    setCorreoParaReenvio(correo); // Guardar correo para posible reenvío
-    Alert.alert(
-      'Éxito', 
-      resultado.message || 'Cuenta creada exitosamente. Revisa tu correo electrónico para verificar tu cuenta.',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Limpiar formulario
-            setUser('');
-            setContra('');
-            setRepContra('');
-            setCorreo('');
-            setCrearc(true);
-            // Navegar a la pantalla de inicio de sesión
-            navigation.navigate('IniciarAcc');
-          }
-        },
-        {
-          text: '¿No recibiste el correo?',
-          onPress: () => handleReenviarCorreo(correo),
-          style: 'cancel'
-        }
-      ] 
-    );
-  } catch (error) {
-    console.error('Error en handleCrearCuenta:', error);
-    Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-const handleReenviarCorreo = async (email) => {
-  const correoAReenviar = email || correoParaReenvio;
-  
-  if (!correoAReenviar) {
-    Alert.alert('Error', 'No hay un correo disponible para reenviar');
-    return;
-  }
-
-  setIsLoading(true);
-  
-  try {
-    const resultado = await reenviarConfirmacion(correoAReenviar);
-    
-    if (resultado.ok) {
-      Alert.alert('Éxito', resultado.message || 'Correo de confirmación reenviado exitosamente');
-    } else {
-      Alert.alert('Error', resultado.message || 'Error al reenviar el correo de confirmación');
+  const handleReenviarCorreo = async (email) => {
+    const addr = email || correoParaReenvio;
+    if (!addr) { Alert.alert('Error', 'No hay correo disponible para reenviar'); return; }
+    setIsLoading(true);
+    try {
+      const res = await reenviarConfirmacion(addr);
+      Alert.alert(res.ok ? 'Éxito' : 'Error', res.message || (res.ok ? 'Correo reenviado' : 'Error al reenviar'));
+    } catch {
+      Alert.alert('Error', 'Ocurrió un error al reenviar el correo');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Error reenviando correo:', error);
-    Alert.alert('Error', 'Ocurrió un error al reenviar el correo');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
+
+  const t = theme;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <View style={[styles.formContainer, { paddingHorizontal: s(24) }]}>
-        {/* Header */}
-        <View style={styles.headerContainer}>
-          <Text style={[styles.title, { fontSize: text(26) }]}>Crear Cuenta</Text>
-          <View style={styles.titleUnderline} />
-          <Text style={styles.subtitle}>Únete a nuestra comunidad</Text>
+    <View style={[styles.root, { backgroundColor: t.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+
+      <TouchableOpacity style={styles.themeBtn} onPress={toggleTheme}>
+        <Text style={[styles.themeBtnText, { color: t.textMuted }]}>{isDark ? '☀' : '⏾'}</Text>
+      </TouchableOpacity>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Branding */}
+        <View style={styles.brandSection}>
+          <View style={[styles.logoBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
+            <Text style={styles.logoEmoji}>📚</Text>
+          </View>
+          <Text style={[styles.appName, { color: t.textPrimary }]}>C-Book</Text>
+          <Text style={[styles.appTagline, { color: t.textMuted }]}>Crea tu cuenta</Text>
         </View>
 
-        {/* Input Fields */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Número de Boleta</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>🎫</Text>
-            <TextInput
-              style={[styles.input, { fontSize: text(15) }]}
-              placeholder="Ingresa tu boleta"
-              placeholderTextColor="#6B7280"
-              value={user}
-              onChangeText={setUser}
-            />
-          </View>
+        {/* Card */}
+        <View style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+          <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Crear Cuenta</Text>
+          <View style={[styles.titleBar, { backgroundColor: t.divider }]} />
+          <Text style={[styles.subtitle, { color: t.textMuted }]}>Únete a nuestra comunidad</Text>
+
+          {[
+            { label: 'NÚMERO DE BOLETA', icon: '🎫', placeholder: 'Ingresa tu boleta', value: user, setter: setUser, secure: false, keyboard: 'default' },
+            { label: 'CORREO ELECTRÓNICO', icon: '✉', placeholder: 'ejemplo@correo.com', value: correo, setter: setCorreo, secure: false, keyboard: 'email-address' },
+            { label: 'CONTRASEÑA', icon: '🔒', placeholder: 'Crea una contraseña', value: contra, setter: setContra, secure: !mostrarContrasena, keyboard: 'default' },
+            { label: 'CONFIRMAR CONTRASEÑA', icon: '🔐', placeholder: 'Repite tu contraseña', value: repcontra, setter: setRepContra, secure: !mostrarContrasena, keyboard: 'default' },
+          ].map((field, i) => (
+            <View key={i} style={styles.inputGroup}>
+              <Text style={[styles.label, { color: t.textMuted }]}>{field.label}</Text>
+              <View style={[styles.inputWrap, { backgroundColor: t.bgInput, borderColor: t.border }]}>
+                <Text style={styles.inputIcon}>{field.icon}</Text>
+                <TextInput
+                  style={[styles.input, { color: t.textPrimary, fontSize: text(15) }]}
+                  placeholder={field.placeholder}
+                  placeholderTextColor={t.textMuted}
+                  keyboardType={field.keyboard}
+                  autoCapitalize="none"
+                  secureTextEntry={field.secure}
+                  value={field.value}
+                  onChangeText={field.setter}
+                />
+              </View>
+            </View>
+          ))}
+
+          {/* Mostrar contraseñas */}
+          <TouchableOpacity style={styles.checkRow} onPress={() => setMostrarContrasena(!mostrarContrasena)}>
+            <View style={[styles.checkbox, { borderColor: t.accent }, mostrarContrasena && { backgroundColor: t.accent }]}>
+              {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={[styles.checkLabel, { color: t.textSecondary, fontSize: text(13) }]}>Mostrar contraseñas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.btnPrimary, { backgroundColor: t.btnPrimary }, isLoading && styles.btnDisabled]}
+            onPress={handleCrearCuenta}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            {isLoading
+              ? <ActivityIndicator color={t.btnPrimaryText} size="small" />
+              : <Text style={[styles.btnPrimaryText, { color: t.btnPrimaryText, fontSize: text(15) }]}>Crear Cuenta</Text>}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.btnSecondary, { borderColor: t.btnSecondaryBorder }]}
+            onPress={() => navigation.navigate('IniciarAcc')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.btnSecondaryText, { color: t.btnSecondaryText, fontSize: text(15) }]}>Ya tengo cuenta</Text>
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Correo Electrónico</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>✉️</Text>
-            <TextInput
-              style={[styles.input, { fontSize: text(15) }]}
-              placeholder="ejemplo@correo.com"
-              placeholderTextColor="#6B7280"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={correo}
-              onChangeText={setCorreo}
-            />
-          </View>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Contraseña</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>🔒</Text>
-            <TextInput
-              style={[styles.input, { fontSize: text(15) }]}
-              placeholder="Crea una contraseña"
-              placeholderTextColor="#6B7280"
-              secureTextEntry={!mostrarContrasena}
-              value={contra}
-              onChangeText={setContra}
-            />
-          </View>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Confirmar Contraseña</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>🔐</Text>
-            <TextInput
-              style={[styles.input, { fontSize: text(15) }]}
-              placeholder="Repite tu contraseña"
-              placeholderTextColor="#6B7280"
-              secureTextEntry={!mostrarContrasena}
-              value={repcontra}
-              onChangeText={setRepContra}
-            />
-          </View>
-        </View>
-
-        {/* Checkbox */}
-        <TouchableOpacity
-          style={styles.checkboxContainer}
-          onPress={() => setMostrarContrasena(!mostrarContrasena)}
-        >
-          <View style={[styles.checkbox, mostrarContrasena && styles.checkboxChecked]}>
-            {mostrarContrasena && <Text style={styles.checkmark}>✓</Text>}
-          </View>
-          <Text style={styles.checkboxLabel}>Mostrar contraseñas</Text>
-        </TouchableOpacity>
-
-        {/* Buttons */}
-        <TouchableOpacity
-          onPress={handleCrearCuenta}
-          style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Text style={[styles.primaryButtonText, { fontSize: text(16) }]}>Crear Cuenta</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('IniciarAcc')}
-          style={styles.secondaryButton}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.secondaryButtonText, { fontSize: text(15) }]}>Ya tengo cuenta</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#111625',
+  root: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 },
+  themeBtn: { position: 'absolute', top: 52, right: 24, zIndex: 10, padding: 8 },
+  themeBtnText: { fontSize: 22 },
+  brandSection: { alignItems: 'center', marginBottom: 28 },
+  logoBox: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 12 },
+  logoEmoji: { fontSize: 28 },
+  appName: { fontSize: 24, fontWeight: '700', letterSpacing: 0.5 },
+  appTagline: { fontSize: 13, marginTop: 4 },
+  card: {
+    borderRadius: 20, padding: 28, borderWidth: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12, shadowRadius: 20, elevation: 6,
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  formContainer: {
-    backgroundColor: '#1A1F2E',
-    marginHorizontal: 20,
-    borderRadius: 24,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: '#353A4D',
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  titleUnderline: {
-    height: 3,
-    width: 50,
-    backgroundColor: '#C35EB9',
-    borderRadius: 2,
-    marginTop: 10,
-  },
-  subtitle: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    marginTop: 12,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 8,
-    marginLeft: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#252A3D',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#353A4D',
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: 50,
-    color: '#FFFFFF',
-    fontSize: 15,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 8,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#C35EB9',
-    backgroundColor: 'transparent',
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#C35EB9',
-  },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  checkboxLabel: {
-    color: '#9CA3AF',
-    fontSize: 14,
-  },
-  primaryButton: {
-    width: '100%',
-    height: 52,
-    backgroundColor: '#C35EB9',
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  secondaryButton: {
-    width: '100%',
-    height: 52,
-    backgroundColor: 'transparent',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#C35EB9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: '#C35EB9',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+  cardTitle: { fontSize: 20, fontWeight: '700', textAlign: 'center', letterSpacing: 0.3 },
+  titleBar: { width: 40, height: 3, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 8 },
+  subtitle: { fontSize: 13, textAlign: 'center', marginBottom: 24 },
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 8, marginLeft: 2 },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, paddingHorizontal: 14 },
+  inputIcon: { fontSize: 15, marginRight: 10 },
+  input: { flex: 1, height: 48 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 4 },
+  checkbox: { width: 18, height: 18, borderRadius: 5, borderWidth: 2, marginRight: 10, alignItems: 'center', justifyContent: 'center' },
+  checkmark: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  checkLabel: { fontWeight: '500' },
+  btnPrimary: { height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  btnPrimaryText: { fontWeight: '700', letterSpacing: 0.3 },
+  btnSecondary: { height: 52, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  btnSecondaryText: { fontWeight: '600' },
+  btnDisabled: { opacity: 0.55 },
 });
 
 export default CrearCuenta;

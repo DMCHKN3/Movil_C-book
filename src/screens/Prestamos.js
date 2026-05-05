@@ -1,407 +1,202 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, StatusBar } from 'react-native';
 import useScale from '../hooks/useScale';
 import { getSolicitudes } from '../../tablas/solicitudes';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
+
+const statusColor = (estado) => {
+  switch (estado) {
+    case 1: return '#d97706';
+    case 2: return '#1f9d74';
+    case 3: return '#dc4c3f';
+    case 4: return '#dc4c3f';
+    default: return '#738296';
+  }
+};
+
+const statusLabel = (estado) => {
+  switch (estado) {
+    case 1: return 'Pendiente';
+    case 2: return 'Aprobado';
+    case 3: return 'Rechazado';
+    case 4: return 'Cancelada';
+    default: return estado || 'Desconocido';
+  }
+};
+
+const tipoLabel = (tipo) => {
+  switch (tipo) {
+    case 'libro': return 'Libro';
+    case 'restirador': return 'Restirador';
+    case 'computadora': return 'Computadora';
+    default: return tipo || 'Desconocido';
+  }
+};
 
 const Prestamos = ({ navigation }) => {
   const { getUserBoleta, isAuthenticated } = useUser();
+  const { theme, isDark } = useTheme();
   const [prestamos, setPrestamos] = useState([]);
   const [loading, setLoading] = useState(true);
   const { s, vs, text } = useScale();
-  
   const registro_id = getUserBoleta();
+  const t = theme;
 
-  const formatearEstado = (estado) => {
-    switch (estado) {
-      case 1 :
-        return 'Pendiente';
-      case 2:
-        return 'Aprobado';
-      case 3:
-        return 'Rechazado';
-      case 4:
-        return 'Cancelada';
-      default:
-        return estado || 'Estado desconocido';
-    }
-  };
-
-  const formatearColor = (estado) => {
-    switch (estado) {
-      case 1:
-        return 'orange';
-      case 2:
-        return 'green';
-      case 3:
-        return 'red';
-      case 4:
-        return 'red';
-      default:
-        return 'black';
-    }
-  };
-
-  const formatearTipo = (tipo) => {
-    switch (tipo) {
-      case 'libro':
-        return 'Libro';
-      case 'restirador':
-        return 'Restirador';
-      case 'computadora':
-        return 'Computadora';
-      default:
-        return tipo || 'Tipo desconocido';
-    }
-  };
-
-  useEffect(() => {
-    const fetchPrestamos = async () => {
-      if (!isAuthenticated() || !registro_id) {
-        console.warn('Usuario no autenticado o sin boleta');
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        const data = await getSolicitudes(registro_id);
-        setPrestamos(data);
-      } catch (error) {
-        console.error('Error cargando préstamos:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPrestamos();
-  }, [registro_id]);
-
-  const handleRefresh = async () => {
-    if (!isAuthenticated() || !registro_id) {
-      console.warn('Usuario no autenticado o sin boleta');
-      return;
-    }
-    
+  const fetchPrestamos = async () => {
+    if (!isAuthenticated() || !registro_id) { setLoading(false); return; }
     try {
       setLoading(true);
-      const data = await getSolicitudes(registro_id);
-      setPrestamos(data);
-    } catch (error) {
-      console.error('Error recargando préstamos:', error);
+      setPrestamos(await getSolicitudes(registro_id));
+    } catch (err) {
+      console.error('Error cargando préstamos:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { fetchPrestamos(); }, [registro_id]);
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <View style={styles.loaderCard}>
-          <ActivityIndicator size="large" color="#C35EB9" />
-          <Text style={styles.loadingText}>Cargando solicitudes...</Text>
+      <View style={[styles.center, { backgroundColor: t.bg }]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+        <View style={[styles.loaderCard, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+          <ActivityIndicator size="large" color={t.accent} />
+          <Text style={[styles.loaderText, { color: t.textSecondary }]}>Cargando solicitudes...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={[styles.content, { paddingHorizontal: s(20) }]}>
-        {/* Header */}
-        <View style={styles.headerSection}>
-          <View style={styles.headerIcon}>
-            <Text style={styles.iconEmoji}>📝</Text>
-          </View>
-          <Text style={[styles.title, { fontSize: text(26) }]}>Mis Préstamos</Text>
-          <Text style={styles.subtitle}>{prestamos.length} solicitudes activas</Text>
-          <View style={styles.divider} />
-        </View>
+    <View style={[styles.root, { backgroundColor: t.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={[styles.content, { paddingHorizontal: s(20) }]}>
 
-        {/* Table */}
-        <View style={styles.table}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View>
-              <View style={styles.tableHeaderRow}>
-                <Text style={[styles.tableHeader, styles.columnMedium]}>Tipo</Text>
-                <Text style={[styles.tableHeader, styles.columnSmall]}>Recurso</Text>
-                <Text style={[styles.tableHeader, styles.columnMedium]}>Fecha</Text>
-                <Text style={[styles.tableHeader, styles.columnMedium]}>Hora</Text>
-                <Text style={[styles.tableHeader, styles.columnMedium]}>Límite</Text>
-                <Text style={[styles.tableHeader, styles.columnMedium]}>Estado</Text>
-              </View>
-
-              {!isAuthenticated() || !registro_id ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyIcon}>🔐</Text>
-                  <Text style={styles.emptyText}>Inicia sesión para ver tus préstamos</Text>
-                </View>
-              ) : prestamos.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyIcon}>📭</Text>
-                  <Text style={styles.emptyText}>No tienes préstamos activos</Text>
-                </View>
-              ) : (
-                prestamos.map((prestamo, index) => (
-                  <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowAlt]}>
-                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(11) }]}>
-                      {formatearTipo(prestamo.tipo) || 'N/A'}
-                    </Text>
-                    <View style={[styles.columnSmall, styles.resourceCell]}>
-                      <View style={styles.resourceBadge}>
-                        <Text style={styles.resourceText}>#{prestamo.recurso_id || '?'}</Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
-                      {prestamo.fecha_solicitud || 'N/A'}
-                    </Text>
-                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
-                      {prestamo.hora_solicitud || 'N/A'}
-                    </Text>
-                    <Text style={[styles.tableCell, styles.columnMedium, { fontSize: text(10) }]}>
-                      {prestamo.hora_limite || 'N/A'}
-                    </Text>
-                    <View style={[styles.columnMedium, styles.statusCell]}>
-                      <View style={[styles.statusBadge, { backgroundColor: formatearColor(prestamo.estado) + '25' }]}>
-                        <Text style={[styles.statusText, { fontSize: text(9), color: formatearColor(prestamo.estado) }]}>
-                          {formatearEstado(prestamo.estado)}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                ))
-              )}
+          {/* Header */}
+          <View style={styles.headerSection}>
+            <View style={[styles.headerIcon, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
+              <Text style={{ fontSize: 30 }}>📝</Text>
             </View>
-          </ScrollView>
+            <Text style={[styles.title, { color: t.textPrimary, fontSize: text(24) }]}>Mis Préstamos</Text>
+            <Text style={[styles.subtitle, { color: t.textMuted }]}>{prestamos.length} solicitudes activas</Text>
+            <View style={[styles.divider, { backgroundColor: t.divider }]} />
+          </View>
+
+          {/* Table (horizontal scroll) */}
+          <View style={[styles.tableWrap, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View>
+                {/* Header row */}
+                <View style={[styles.tableHead, { backgroundColor: t.bgCardAlt, borderBottomColor: t.border }]}>
+                  {['Tipo', 'Recurso', 'Fecha', 'Hora', 'Límite', 'Estado'].map((h) => (
+                    <Text key={h} style={[styles.th, { color: t.textMuted, fontSize: text(10) }]}>{h}</Text>
+                  ))}
+                </View>
+
+                {!isAuthenticated() || !registro_id ? (
+                  <View style={styles.emptyState}>
+                    <Text style={{ fontSize: 36, marginBottom: 10, opacity: 0.6 }}>🔐</Text>
+                    <Text style={[styles.emptyText, { color: t.textMuted }]}>Inicia sesión para ver tus préstamos</Text>
+                  </View>
+                ) : prestamos.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={{ fontSize: 36, marginBottom: 10, opacity: 0.6 }}>📭</Text>
+                    <Text style={[styles.emptyText, { color: t.textMuted }]}>No tienes préstamos activos</Text>
+                  </View>
+                ) : (
+                  prestamos.map((p, i) => {
+                    const color = statusColor(p.estado);
+                    return (
+                      <View
+                        key={i}
+                        style={[styles.tableRow, { borderBottomColor: t.border }, i % 2 !== 0 && { backgroundColor: t.bgCardAlt }]}
+                      >
+                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(11) }]}>
+                          {tipoLabel(p.tipo)}
+                        </Text>
+                        <View style={[styles.cSmall, { alignItems: 'center' }]}>
+                          <View style={[styles.resourceBadge, { backgroundColor: t.infoBg }]}>
+                            <Text style={[styles.resourceText, { color: t.info, fontSize: text(10) }]}>#{p.recurso_id || '?'}</Text>
+                          </View>
+                        </View>
+                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>{p.fecha_solicitud || 'N/A'}</Text>
+                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>{p.hora_solicitud || 'N/A'}</Text>
+                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>{p.hora_limite || 'N/A'}</Text>
+                        <View style={[styles.cMed, { alignItems: 'center' }]}>
+                          <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
+                            <Text style={[styles.statusText, { color, fontSize: text(9) }]}>{statusLabel(p.estado)}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Buttons */}
+          <TouchableOpacity
+            style={[styles.refreshBtn, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}
+            onPress={fetchPrestamos}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.refreshBtnText, { color: t.accentBright, fontSize: text(14) }]}>🔄  Actualizar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: t.btnPrimary }]}
+            onPress={() => navigation.navigate('Main')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.backBtnText, { color: t.btnPrimaryText, fontSize: text(15) }]}>← Regresar al Menú</Text>
+          </TouchableOpacity>
+
         </View>
-
-        {/* Action Buttons */}
-        <TouchableOpacity
-          onPress={handleRefresh}
-          style={styles.refreshButton}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <>
-              <Text style={styles.refreshIcon}>🔄</Text>
-              <Text style={[styles.refreshButtonText, { fontSize: text(14) }]}>Actualizar</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Main')}
-          style={styles.backButton}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.backIcon}>←</Text>
-          <Text style={[styles.backButtonText, { fontSize: text(15) }]}>Regresar al Menú</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#111625',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#111625',
-  },
-  loaderCard: {
-    backgroundColor: '#1A1F2E',
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#353A4D',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  headerIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: '#C35EB920',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  iconEmoji: {
-    fontSize: 32,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    marginTop: 8,
-  },
-  divider: {
-    height: 3,
-    width: 50,
-    backgroundColor: '#C35EB9',
-    borderRadius: 2,
-    marginTop: 16,
-  },
-  table: {
-    width: '100%',
-    backgroundColor: '#1A1F2E',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#353A4D',
-    marginBottom: 24,
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: '#252A3D',
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 56,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#252A3D',
-  },
-  tableRowAlt: {
-    backgroundColor: '#1E233315',
-  },
-  tableHeader: {
-    color: '#9CA3AF',
-    fontSize: 10,
-    fontWeight: '700',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  tableCell: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    textAlign: 'center',
-    fontWeight: '400',
-  },
-  columnSmall: {
-    width: 70,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-  },
-  columnMedium: {
-    width: 85,
-    paddingHorizontal: 4,
-  },
-  resourceCell: {
-    justifyContent: 'center',
-  },
-  resourceBadge: {
-    backgroundColor: '#4A90E230',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  resourceText: {
-    color: '#4A90E2',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  statusCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  statusText: {
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-    opacity: 0.6,
-  },
-  emptyText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4A90E2',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    marginBottom: 12,
-  },
-  refreshIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  refreshButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#C35EB9',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  backIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
-    marginRight: 10,
-  },
-  backButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  root: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loaderCard: { borderRadius: 20, padding: 40, alignItems: 'center', borderWidth: 1 },
+  loaderText: { marginTop: 14, fontSize: 15, fontWeight: '500' },
+
+  content: { paddingTop: 54, paddingBottom: 40 },
+
+  headerSection: { alignItems: 'center', marginBottom: 28 },
+  headerIcon: { width: 68, height: 68, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  title: { fontWeight: '700', letterSpacing: 0.4 },
+  subtitle: { fontSize: 13, marginTop: 6 },
+  divider: { height: 3, width: 44, borderRadius: 2, marginTop: 14 },
+
+  tableWrap: { borderRadius: 14, overflow: 'hidden', borderWidth: 1, marginBottom: 20 },
+  tableHead: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 4, borderBottomWidth: 1 },
+  th: { width: 88, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.3 },
+  tableRow: { flexDirection: 'row', alignItems: 'center', minHeight: 52, paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1 },
+  td: { textAlign: 'center', paddingHorizontal: 2 },
+
+  cSmall: { width: 70, paddingHorizontal: 4 },
+  cMed: { width: 88, paddingHorizontal: 4 },
+
+  resourceBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  resourceText: { fontWeight: '700' },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  statusText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+
+  emptyState: { padding: 36, alignItems: 'center' },
+  emptyText: { fontSize: 13, fontWeight: '500', textAlign: 'center' },
+
+  refreshBtn: { borderRadius: 12, borderWidth: 1, paddingVertical: 14, alignItems: 'center', marginBottom: 10 },
+  refreshBtnText: { fontWeight: '600' },
+  backBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  backBtnText: { fontWeight: '600' },
 });
 
 export default Prestamos;
