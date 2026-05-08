@@ -9,6 +9,7 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { getEstadoGral } from '../../tablas/estado_gral';
 import { getRecientes } from '../../tablas/actvs_rec';
+import { cerrarSesionConAuth } from '../../BD/supabaseAuthService';
 
 const { width } = Dimensions.get('window');
 
@@ -59,9 +60,21 @@ const Main = ({ navigation }) => {
           { text: 'Cancelar', style: 'cancel' },
           {
             text: 'Cerrar sesión',
-            onPress: async () => {
-              await logout();
-              navigation.reset({ index: 0, routes: [{ name: 'IniciarAcc' }] });
+                onPress: async () => {
+              try {
+                const resultado = await cerrarSesionConAuth();
+                if (resultado.ok) {
+                  await logout();
+                  navigation.navigate('IniciarAcc');
+                  console.log('Sesión cerrada exitosamente');
+                  Alert.alert('Sesión Cerrada', 'Has cerrado sesión exitosamente.');
+                } else {
+                  Alert.alert('Error', resultado.message || 'No se pudo cerrar sesión. Intenta de nuevo.');
+                }
+              } catch (error) {
+                console.error('Error en   logout:', error);
+                Alert.alert('Error', 'Ocurrió un error al cerrar sesión.');
+              }
             },
           },
         ], { cancelable: false });

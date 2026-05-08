@@ -264,8 +264,26 @@ export async function iniciarSesionConAuth(correo, password) {
     }
 }
 
-// Nota: El cierre de sesión se maneja localmente con AsyncStorage
-// No es necesario cerrar sesión en Supabase Auth ya que el inicio de sesión no lo usa
+// Función para cerrar sesión en Supabase Auth
+export async function cerrarSesionConAuth() {
+    console.log('Cerrando sesión en Supabase Auth...');
+
+    try {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+            console.error('Error cerrando sesión en Supabase Auth:', error);
+            return { ok: false, message: 'Error al cerrar sesión' };
+        }
+
+        console.log('Sesión cerrada en Supabase Auth exitosamente');
+        return { ok: true, message: 'Sesión cerrada exitosamente' };
+
+    } catch (error) {
+        console.error('Error inesperado cerrando sesión:', error);
+        return { ok: false, message: 'Error inesperado al cerrar sesión' };
+    }
+}
 
 // Función para reenviar correo de confirmación
 export async function reenviarConfirmacion(correo) {
@@ -296,6 +314,7 @@ export async function reenviarConfirmacion(correo) {
 export default {
     crearCuentaConAuth,
     iniciarSesionConAuth,
+    cerrarSesionConAuth,
     reenviarConfirmacion,
     verificarBoletaExiste,
     verificarCuentaExistente,

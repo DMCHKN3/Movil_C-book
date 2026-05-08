@@ -4,6 +4,7 @@ import useScale from '../hooks/useScale';
 import { getUsuario, getDatos } from '../../tablas/cuenta';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { cerrarSesionConAuth } from '../../BD/supabaseAuthService';
 
 const Cuenta = ({ navigation }) => {
   const { logout, getUserBoleta } = useUser();
@@ -36,7 +37,22 @@ const Cuenta = ({ navigation }) => {
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Cerrar Sesión', style: 'destructive',
-        onPress: async () => { await logout(); navigation.navigate('IniciarAcc'); },
+        onPress: async () => {
+          try {
+            const resultado = await cerrarSesionConAuth();
+            if (resultado.ok) {
+              await logout();
+              navigation.navigate('IniciarAcc');
+              console.log('Sesión cerrada exitosamente');
+              Alert.alert('Sesión Cerrada', 'Has cerrado sesión exitosamente.');
+            } else {
+              Alert.alert('Error', resultado.message || 'No se pudo cerrar sesión. Intenta de nuevo.');
+            }
+          } catch (error) {
+            console.error('Error en   logout:', error);
+            Alert.alert('Error', 'Ocurrió un error al cerrar sesión.');
+          }
+        },
       },
     ]);
   };
