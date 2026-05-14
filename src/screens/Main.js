@@ -15,24 +15,26 @@ import { cerrarSesionConAuth } from '../../BD/supabaseAuthService';
 const { width } = Dimensions.get('window');
 
 const statusColor = (estado) => {
-  const e = Number(estado);
-  switch (e) {
+  switch (Number(estado)) {
     case 1: return '#d97706';
-    case 2: return '#1f9d74';
-    case 3: return '#dc4c3f';
-    case 4: return '#dc4c3f';
-    default: return '#738296';
+    case 2: return '#3b82f6';
+    case 3: return '#ef4444';
+    case 4: return '#ef4444';
+    case 5: return '#22c55e';
+    case 6: return '#c46f21';
+    default: return '#6b7280';
   }
 };
 
 const statusLabel = (estado) => {
-  const e = Number(estado);
-  switch (e) {
+  switch (Number(estado)) {
     case 1: return 'Pendiente';
-    case 2: return 'Aprobado';
-    case 3: return 'Rechazado';
+    case 2: return 'Aprobada';
+    case 3: return 'Rechazada';
     case 4: return 'Cancelada';
-    default: return e || 'Desconocido';
+    case 5: return 'Entregado';
+    case 6: return 'Devuelto';
+    default: return 'Desconocido';
   }
 };
 

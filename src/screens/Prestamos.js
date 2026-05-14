@@ -8,18 +8,19 @@ import { getSolicitudesCompletas, cancelarSolicitud } from '../../tablas/solicit
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 
-const ESTADO_MAP = {
-  1: { label: 'Pendiente', color: '#d97706', bg: '#d9770622' },
-  2: { label: 'Aprobada', color: '#3b82f6', bg: '#3b82f622' },
-  3: { label: 'Rechazada', color: '#ef4444', bg: '#ef444422' },
-  4: { label: 'Cancelada', color: '#ef4444', bg: '#ef444422' },
-  5: { label: 'Entregado', color: '#22c55e', bg: '#22c55e22' },
-  6: { label: 'Devuelto', color: '#c46f21', bg: '#c46f2122' },
-};
-
 function getEstado(id) {
-  const n = Number(id);
-  return ESTADO_MAP[n] || { label: `Estado ${n}`, color: '#6b7280', bg: '#6b728022' };
+  const e = Number(id);
+  let label, color;
+  switch (e) {
+    case 1: label = 'Pendiente';  color = '#d97706'; break;
+    case 2: label = 'Aprobada';   color = '#3b82f6'; break;
+    case 3: label = 'Rechazada';  color = '#ef4444'; break;
+    case 4: label = 'Cancelada';  color = '#ef4444'; break;
+    case 5: label = 'Entregado';  color = '#22c55e'; break;
+    case 6: label = 'Devuelto';   color = '#c46f21'; break;
+    default: label = `Estado ${e}`; color = '#6b7280';
+  }
+  return { label, color, bg: color + '22' };
 }
 
 function estadoEfectivo(s) {
