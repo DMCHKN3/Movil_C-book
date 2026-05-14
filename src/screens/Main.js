@@ -41,9 +41,7 @@ const statusLabel = (estado) => {
 const tipoLabel = (tipo) => {
   switch (tipo) {
     case 'libro': return 'Préstamo de libro';
-    case 'restirador': return 'Préstamo de restirador';
-    case 'computadora': return 'Préstamo de computadora';
-    default: return tipo || 'Tipo desconocido';
+    default: return 'Préstamo de libro';
   }
 };
 

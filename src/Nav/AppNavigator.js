@@ -1,9 +1,10 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 import IniciarSesion from '../screens/IniciarAcc';
 import CrearCuenta from '../screens/CrearAcc';
@@ -14,6 +15,23 @@ import Prestamos from '../screens/Prestamos';
 import RecuperarContra from '../screens/RecuperarContra';
 
 const Stack = createNativeStackNavigator();
+
+const NotificationHandler = () => {
+  const navigation = useNavigation();
+  const { notificationData, clearNotificationData } = useNotifications();
+
+  useEffect(() => {
+    if (notificationData) {
+      const { screen, ...rest } = notificationData;
+      if (screen) {
+        navigation.navigate(screen, rest);
+      }
+      clearNotificationData();
+    }
+  }, [notificationData]);
+
+  return null;
+};
 
 const AppNavigator = () => {
   const { isAuthenticated, isLoading } = useUser();
@@ -31,6 +49,7 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer>
+      <NotificationHandler />
       <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="IniciarAcc" component={IniciarSesion} />
         <Stack.Screen name="CrearAcc" component={CrearCuenta} />

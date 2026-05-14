@@ -21,10 +21,19 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.cbook"
+      "package": "com.cbook.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c6ac2b27-cac5-4ec6-a58d-d16aa425b9f4"
+      }
+    },
+    "owner": "rodrigo_v"
   }
 }
