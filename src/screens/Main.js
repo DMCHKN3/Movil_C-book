@@ -9,12 +9,14 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { getEstadoGral } from '../../tablas/estado_gral';
 import { getRecientes } from '../../tablas/actvs_rec';
+import { getUsuario } from '../../tablas/cuenta';
 import { cerrarSesionConAuth } from '../../BD/supabaseAuthService';
 
 const { width } = Dimensions.get('window');
 
 const statusColor = (estado) => {
-  switch (estado) {
+  const e = Number(estado);
+  switch (e) {
     case 1: return '#d97706';
     case 2: return '#1f9d74';
     case 3: return '#dc4c3f';
@@ -24,12 +26,13 @@ const statusColor = (estado) => {
 };
 
 const statusLabel = (estado) => {
-  switch (estado) {
+  const e = Number(estado);
+  switch (e) {
     case 1: return 'Pendiente';
     case 2: return 'Aprobado';
     case 3: return 'Rechazado';
     case 4: return 'Cancelada';
-    default: return estado || 'Desconocido';
+    default: return e || 'Desconocido';
   }
 };
 
@@ -49,6 +52,7 @@ const Main = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [estadoGral, setEstadoGral] = useState([]);
   const [recientes, setRecientes] = useState([]);
+  const [nombreAlumno, setNombreAlumno] = useState('');
   const registro_id = getUserBoleta();
   const cardWidth = s(180);
   const t = theme;
@@ -90,12 +94,18 @@ const Main = ({ navigation }) => {
       if (!isAuthenticated() || !registro_id) { setLoading(false); return; }
       try {
         setLoading(true);
-        const [estadoData, recientesData] = await Promise.all([
+        const [estadoData, recientesData, usuarioData] = await Promise.all([
           getEstadoGral(registro_id),
           getRecientes(registro_id),
+          getUsuario(registro_id),
         ]);
         setEstadoGral(estadoData);
         setRecientes(recientesData);
+        if (usuarioData?.length > 0) {
+          const u = usuarioData[0];
+          const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ') || u.nombre || '';
+          setNombreAlumno(nombre);
+        }
       } catch (err) {
         console.error('Error cargando datos:', err);
       } finally {
@@ -128,7 +138,7 @@ const Main = ({ navigation }) => {
             <View style={styles.headerLeft}>
               <Text style={[styles.greeting, { color: t.textMuted, fontSize: text(14) }]}>¡Hola de nuevo!</Text>
               <Text style={[styles.username, { color: t.textPrimary, fontSize: text(22) }]}>
-                {perfil ? perfil.correo.split('@')[0] : 'Usuario'}
+                {nombreAlumno || (perfil ? String(perfil.boleta) : 'Usuario')}
               </Text>
             </View>
             <TouchableOpacity

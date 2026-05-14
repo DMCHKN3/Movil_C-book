@@ -25,6 +25,8 @@ const Biblioteca = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterDisp, setFilterDisp] = useState('');
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 3;
 
   const [confirmItem, setConfirmItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +57,8 @@ const Biblioteca = ({ navigation }) => {
     return [...new Set(items.map(b => b.libros?.tipo_material).filter(Boolean))];
   }, [items]);
 
+  useEffect(() => { setPage(1); }, [search, filterTipo, filterDisp]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return items.filter(b => {
@@ -77,6 +81,9 @@ const Biblioteca = ({ navigation }) => {
       return true;
     });
   }, [items, search, filterTipo, filterDisp]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const handleSolicitar = async () => {
     if (!confirmItem || submitting) return;
@@ -228,7 +235,7 @@ const Biblioteca = ({ navigation }) => {
             </View>
           ) : (
             <View style={styles.cardGrid}>
-              {filtered.map((b) => {
+              {paged.map((b) => {
                 const disponible = b.Disponible;
                 return (
                   <View key={b.id} style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
@@ -289,6 +296,26 @@ const Biblioteca = ({ navigation }) => {
                   </View>
                 );
               })}
+            </View>
+          )}
+
+          {filtered.length > PER_PAGE && (
+            <View style={styles.pagination}>
+              <TouchableOpacity
+                style={[styles.pageBtn, { backgroundColor: t.bgCardAlt, borderColor: t.border }, page <= 1 && styles.pageBtnDisabled]}
+                onPress={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                <Text style={[styles.pageBtnText, { color: page <= 1 ? t.textMuted : t.textPrimary }]}>‹ Anterior</Text>
+              </TouchableOpacity>
+              <Text style={[styles.pageInfo, { color: t.textMuted }]}>{page} / {totalPages}</Text>
+              <TouchableOpacity
+                style={[styles.pageBtn, { backgroundColor: t.bgCardAlt, borderColor: t.border }, page >= totalPages && styles.pageBtnDisabled]}
+                onPress={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+              >
+                <Text style={[styles.pageBtnText, { color: page >= totalPages ? t.textMuted : t.textPrimary }]}>Siguiente ›</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -394,6 +421,12 @@ const styles = StyleSheet.create({
   solicitarBtn: { marginHorizontal: 14, marginBottom: 14, borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   solicitarBtnDisabled: { opacity: 0.5 },
   solicitarBtnText: { fontWeight: '700', letterSpacing: 0.3 },
+
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 },
+  pageBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1 },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageBtnText: { fontWeight: '600', fontSize: 13 },
+  pageInfo: { fontWeight: '600', fontSize: 13, minWidth: 50, textAlign: 'center' },
 
   backBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
   backBtnText: { fontWeight: '600' },

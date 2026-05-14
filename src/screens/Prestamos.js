@@ -18,12 +18,14 @@ const ESTADO_MAP = {
 };
 
 function getEstado(id) {
-  return ESTADO_MAP[id] || { label: `Estado ${id}`, color: '#6b7280', bg: '#6b728022' };
+  const n = Number(id);
+  return ESTADO_MAP[n] || { label: `Estado ${n}`, color: '#6b7280', bg: '#6b728022' };
 }
 
 function estadoEfectivo(s) {
-  if (s.estado_asistencia_id === 5 && s.fecha_devolucion_real) return 6;
-  return s.estado_asistencia_id;
+  const eid = Number(s.estado_asistencia_id);
+  if (eid === 5 && s.fecha_devolucion_real) return 6;
+  return eid;
 }
 
 function fmtFecha(iso) {
@@ -46,6 +48,8 @@ const Prestamos = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [cancelModal, setCancelModal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 5;
 
   const fetchPrestamos = useCallback(async () => {
     if (!isAuthenticated() || !boleta) { setLoading(false); return; }
@@ -73,6 +77,7 @@ const Prestamos = ({ navigation }) => {
             ? { ...s, estado_asistencia_id: 4 }
             : s
         ));
+        setPage(1);
         Alert.alert('Éxito', resultado.message);
       } else {
         Alert.alert('Error', resultado.message);
@@ -85,7 +90,9 @@ const Prestamos = ({ navigation }) => {
     }
   };
 
-  const pendientes = items.filter(s => s.estado_asistencia_id === 1);
+  const pendientes = items.filter(s => Number(s.estado_asistencia_id) === 1);
+  const totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  const paged = items.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   if (loading) {
     return (
@@ -129,83 +136,106 @@ const Prestamos = ({ navigation }) => {
               <Text style={[styles.emptyText, { color: t.textMuted }]}>No tienes solicitudes de libros</Text>
             </View>
           ) : (
-            <View style={styles.list}>
-              {items.map((s) => {
-                const est = getEstado(estadoEfectivo(s));
-                return (
-                  <View key={s.id} style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
-                    <View style={styles.cardTop}>
-                      <View style={styles.cardTopLeft}>
-                        <Text style={[styles.cardTitle, { color: t.textPrimary, fontSize: text(14) }]} numberOfLines={1}>
-                          {s.titulo || `Libro #${s.ejemplar_id}`}
-                        </Text>
+            <>
+              <View style={styles.list}>
+                {paged.map((s) => {
+                  const estadoNum = estadoEfectivo(s);
+                  const est = getEstado(estadoNum);
+                  return (
+                    <View key={s.id} style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+                      <View style={styles.cardTop}>
+                        <View style={styles.cardTopLeft}>
+                          <Text style={[styles.cardTitle, { color: t.textPrimary, fontSize: text(14) }]} numberOfLines={1}>
+                            {s.titulo || `Libro #${s.ejemplar_id}`}
+                          </Text>
+                        </View>
+                        <View style={[styles.cardBadge, { backgroundColor: est.bg }]}>
+                          <Text style={[styles.cardBadgeText, { color: est.color, fontSize: text(9) }]}>
+                            {est.label}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={[styles.cardBadge, { backgroundColor: est.bg }]}>
-                        <Text style={[styles.cardBadgeText, { color: est.color, fontSize: text(9) }]}>
-                          {est.label}
-                        </Text>
-                      </View>
-                    </View>
 
-                    {s.autor && (
-                      <Text style={[styles.cardAutor, { color: t.textMuted, fontSize: text(11) }]}>
-                        {s.autor}
-                      </Text>
-                    )}
-
-                    <View style={[styles.cardDivider, { backgroundColor: t.divider }]} />
-
-                    <View style={styles.cardInfo}>
-                      <View style={styles.infoRow}>
-                        <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>SOLICITUD #</Text>
-                        <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>{s.id}</Text>
-                      </View>
-                      <View style={styles.infoRow}>
-                        <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>FECHA</Text>
-                        <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
-                          {fmtFecha(s.fecha_solicitud) || 'N/A'}
+                      {s.autor && (
+                        <Text style={[styles.cardAutor, { color: t.textMuted, fontSize: text(11) }]}>
+                          {s.autor}
                         </Text>
-                      </View>
-                      {s.fecha_aprobacion && (
+                      )}
+
+                      <View style={[styles.cardDivider, { backgroundColor: t.divider }]} />
+
+                      <View style={styles.cardInfo}>
                         <View style={styles.infoRow}>
-                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>APROBACIÓN</Text>
+                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>SOLICITUD #</Text>
+                          <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>{s.id}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>FECHA</Text>
                           <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
-                            {fmtFecha(s.fecha_aprobacion)}
+                            {fmtFecha(s.fecha_solicitud) || 'N/A'}
                           </Text>
                         </View>
-                      )}
-                      {s.fecha_limite_devolucion && (
-                        <View style={styles.infoRow}>
-                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>LÍMITE DEV.</Text>
-                          <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
-                            {fmtFecha(s.fecha_limite_devolucion)}
-                          </Text>
-                        </View>
-                      )}
-                      {s.fecha_devolucion_real && (
-                        <View style={styles.infoRow}>
-                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>DEVUELTO</Text>
-                          <Text style={[styles.infoValue, { color: t.success || '#22c55e', fontSize: text(12) }]}>
-                            {fmtFecha(s.fecha_devolucion_real)}
-                          </Text>
-                        </View>
+                        {s.fecha_aprobacion && (
+                          <View style={styles.infoRow}>
+                            <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>APROBACIÓN</Text>
+                            <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
+                              {fmtFecha(s.fecha_aprobacion)}
+                            </Text>
+                          </View>
+                        )}
+                        {s.fecha_limite_devolucion && (
+                          <View style={styles.infoRow}>
+                            <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>LÍMITE DEV.</Text>
+                            <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
+                              {fmtFecha(s.fecha_limite_devolucion)}
+                            </Text>
+                          </View>
+                        )}
+                        {s.fecha_devolucion_real && (
+                          <View style={styles.infoRow}>
+                            <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>DEVUELTO</Text>
+                            <Text style={[styles.infoValue, { color: t.success || '#22c55e', fontSize: text(12) }]}>
+                              {fmtFecha(s.fecha_devolucion_real)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {estadoNum === 1 && (
+                        <TouchableOpacity
+                          style={[styles.cancelBtn, { backgroundColor: t.dangerBg || '#ef444422', borderColor: t.danger || '#ef4444' }]}
+                          onPress={() => setCancelModal(s)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={{ fontSize: 14, marginRight: 6 }}>✕</Text>
+                          <Text style={[styles.cancelBtnText, { color: t.danger || '#ef4444', fontSize: text(12) }]}>Cancelar solicitud</Text>
+                        </TouchableOpacity>
                       )}
                     </View>
+                  );
+                })}
+              </View>
 
-                    {s.estado_asistencia_id === 1 && (
-                      <TouchableOpacity
-                        style={[styles.cancelBtn, { backgroundColor: t.dangerBg || '#ef444422', borderColor: t.danger || '#ef4444' }]}
-                        onPress={() => setCancelModal(s)}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={{ fontSize: 14, marginRight: 6 }}>✕</Text>
-                        <Text style={[styles.cancelBtnText, { color: t.danger || '#ef4444', fontSize: text(12) }]}>Cancelar solicitud</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
+              {items.length > PER_PAGE && (
+                <View style={styles.pagination}>
+                  <TouchableOpacity
+                    style={[styles.pageBtn, { backgroundColor: t.bgCardAlt, borderColor: t.border }, page <= 1 && styles.pageBtnDisabled]}
+                    onPress={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                  >
+                    <Text style={[styles.pageBtnText, { color: page <= 1 ? t.textMuted : t.textPrimary }]}>‹ Anterior</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.pageInfo, { color: t.textMuted }]}>{page} / {totalPages}</Text>
+                  <TouchableOpacity
+                    style={[styles.pageBtn, { backgroundColor: t.bgCardAlt, borderColor: t.border }, page >= totalPages && styles.pageBtnDisabled]}
+                    onPress={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                  >
+                    <Text style={[styles.pageBtnText, { color: page >= totalPages ? t.textMuted : t.textPrimary }]}>Siguiente ›</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
           )}
 
           <TouchableOpacity
@@ -306,6 +336,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cancelBtnText: { fontWeight: '700' },
+
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 },
+  pageBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1 },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageBtnText: { fontWeight: '600', fontSize: 13 },
+  pageInfo: { fontWeight: '600', fontSize: 13, minWidth: 50, textAlign: 'center' },
 
   refreshBtn: { borderRadius: 14, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 12 },
   refreshBtnText: { fontWeight: '600' },
