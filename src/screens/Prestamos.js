@@ -1,61 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, StatusBar } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  ActivityIndicator, StatusBar, Alert, Modal,
+} from 'react-native';
 import useScale from '../hooks/useScale';
-import { getSolicitudes } from '../../tablas/solicitudes';
+import { getSolicitudesCompletas, cancelarSolicitud } from '../../tablas/solicitudesAcciones';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 
-const statusColor = (estado) => {
-  switch (estado) {
-    case 1: return '#d97706';
-    case 2: return '#1f9d74';
-    case 3: return '#dc4c3f';
-    case 4: return '#dc4c3f';
-    default: return '#738296';
-  }
+const ESTADO_MAP = {
+  1: { label: 'Pendiente', color: '#d97706', bg: '#d9770622' },
+  2: { label: 'Aprobada', color: '#3b82f6', bg: '#3b82f622' },
+  3: { label: 'Rechazada', color: '#ef4444', bg: '#ef444422' },
+  4: { label: 'Cancelada', color: '#ef4444', bg: '#ef444422' },
+  5: { label: 'Entregado', color: '#22c55e', bg: '#22c55e22' },
+  6: { label: 'Devuelto', color: '#c46f21', bg: '#c46f2122' },
 };
 
-const statusLabel = (estado) => {
-  switch (estado) {
-    case 1: return 'Pendiente';
-    case 2: return 'Aprobado';
-    case 3: return 'Rechazado';
-    case 4: return 'Cancelada';
-    default: return estado || 'Desconocido';
-  }
-};
+function getEstado(id) {
+  return ESTADO_MAP[id] || { label: `Estado ${id}`, color: '#6b7280', bg: '#6b728022' };
+}
 
-const tipoLabel = (tipo) => {
-  switch (tipo) {
-    case 'libro': return 'Libro';
-    case 'restirador': return 'Restirador';
-    case 'computadora': return 'Computadora';
-    default: return tipo || 'Desconocido';
-  }
-};
+function estadoEfectivo(s) {
+  if (s.estado_asistencia_id === 5 && s.fecha_devolucion_real) return 6;
+  return s.estado_asistencia_id;
+}
+
+function fmtFecha(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
 
 const Prestamos = ({ navigation }) => {
   const { getUserBoleta, isAuthenticated } = useUser();
   const { theme, isDark } = useTheme();
-  const [prestamos, setPrestamos] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { s, vs, text } = useScale();
-  const registro_id = getUserBoleta();
+  const boleta = getUserBoleta();
   const t = theme;
 
-  const fetchPrestamos = async () => {
-    if (!isAuthenticated() || !registro_id) { setLoading(false); return; }
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cancelModal, setCancelModal] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchPrestamos = useCallback(async () => {
+    if (!isAuthenticated() || !boleta) { setLoading(false); return; }
     try {
       setLoading(true);
-      setPrestamos(await getSolicitudes(registro_id));
+      const data = await getSolicitudesCompletas(boleta);
+      setItems(data);
     } catch (err) {
       console.error('Error cargando préstamos:', err);
     } finally {
       setLoading(false);
     }
+  }, [boleta, isAuthenticated]);
+
+  useEffect(() => { fetchPrestamos(); }, [fetchPrestamos]);
+
+  const handleCancel = async () => {
+    if (!cancelModal || submitting) return;
+    setSubmitting(true);
+    try {
+      const resultado = await cancelarSolicitud(cancelModal.id, boleta);
+      if (resultado.ok) {
+        setItems(prev => prev.map(s =>
+          s.id === cancelModal.id
+            ? { ...s, estado_asistencia_id: 4 }
+            : s
+        ));
+        Alert.alert('Éxito', resultado.message);
+      } else {
+        Alert.alert('Error', resultado.message);
+      }
+    } catch {
+      Alert.alert('Error', 'Error al cancelar la solicitud');
+    } finally {
+      setSubmitting(false);
+      setCancelModal(null);
+    }
   };
 
-  useEffect(() => { fetchPrestamos(); }, [registro_id]);
+  const pendientes = items.filter(s => s.estado_asistencia_id === 1);
 
   if (loading) {
     return (
@@ -74,71 +104,110 @@ const Prestamos = ({ navigation }) => {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={[styles.content, { paddingHorizontal: s(20) }]}>
-
-          {/* Header */}
           <View style={styles.headerSection}>
             <View style={[styles.headerIcon, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
               <Text style={{ fontSize: 30 }}>📝</Text>
             </View>
             <Text style={[styles.title, { color: t.textPrimary, fontSize: text(24) }]}>Mis Préstamos</Text>
-            <Text style={[styles.subtitle, { color: t.textMuted }]}>{prestamos.length} solicitudes activas</Text>
+            <Text style={[styles.subtitle, { color: t.textMuted }]}>
+              {items.length} solicitud{items.length !== 1 ? 'es' : ''}
+            </Text>
             <View style={[styles.divider, { backgroundColor: t.divider }]} />
           </View>
 
-          {/* Table (horizontal scroll) */}
-          <View style={[styles.tableWrap, { backgroundColor: t.bgCard, borderColor: t.border }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View>
-                {/* Header row */}
-                <View style={[styles.tableHead, { backgroundColor: t.bgCardAlt, borderBottomColor: t.border }]}>
-                  {['Tipo', 'Recurso', 'Fecha', 'Hora', 'Límite', 'Estado'].map((h) => (
-                    <Text key={h} style={[styles.th, { color: t.textMuted, fontSize: text(10) }]}>{h}</Text>
-                  ))}
-                </View>
+          {pendientes.length > 0 && (
+            <View style={[styles.infoBanner, { backgroundColor: t.warningBg || '#f59e0b18', borderColor: t.warning || '#f59e0b44' }]}>
+              <Text style={[styles.infoBannerText, { color: t.warning || '#f59e0b' }]}>
+                Tienes {pendientes.length} solicitud{pendientes.length !== 1 ? 'es' : ''} pendiente{pendientes.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
 
-                {!isAuthenticated() || !registro_id ? (
-                  <View style={styles.emptyState}>
-                    <Text style={{ fontSize: 36, marginBottom: 10, opacity: 0.6 }}>🔐</Text>
-                    <Text style={[styles.emptyText, { color: t.textMuted }]}>Inicia sesión para ver tus préstamos</Text>
-                  </View>
-                ) : prestamos.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Text style={{ fontSize: 36, marginBottom: 10, opacity: 0.6 }}>📭</Text>
-                    <Text style={[styles.emptyText, { color: t.textMuted }]}>No tienes préstamos activos</Text>
-                  </View>
-                ) : (
-                  prestamos.map((p, i) => {
-                    const color = statusColor(p.estado);
-                    return (
-                      <View
-                        key={i}
-                        style={[styles.tableRow, { borderBottomColor: t.border }, i % 2 !== 0 && { backgroundColor: t.bgCardAlt }]}
-                      >
-                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(11) }]}>
-                          {tipoLabel(p.tipo)}
+          {items.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={{ fontSize: 40, marginBottom: 10, opacity: 0.6 }}>📭</Text>
+              <Text style={[styles.emptyText, { color: t.textMuted }]}>No tienes solicitudes de libros</Text>
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {items.map((s) => {
+                const est = getEstado(estadoEfectivo(s));
+                return (
+                  <View key={s.id} style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+                    <View style={styles.cardTop}>
+                      <View style={styles.cardTopLeft}>
+                        <Text style={[styles.cardTitle, { color: t.textPrimary, fontSize: text(14) }]} numberOfLines={1}>
+                          {s.titulo || `Libro #${s.ejemplar_id}`}
                         </Text>
-                        <View style={[styles.cSmall, { alignItems: 'center' }]}>
-                          <View style={[styles.resourceBadge, { backgroundColor: t.infoBg }]}>
-                            <Text style={[styles.resourceText, { color: t.info, fontSize: text(10) }]}>#{p.recurso_id || '?'}</Text>
-                          </View>
-                        </View>
-                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>{p.fecha_solicitud || 'N/A'}</Text>
-                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>{p.hora_solicitud || 'N/A'}</Text>
-                        <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>{p.hora_limite || 'N/A'}</Text>
-                        <View style={[styles.cMed, { alignItems: 'center' }]}>
-                          <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
-                            <Text style={[styles.statusText, { color, fontSize: text(9) }]}>{statusLabel(p.estado)}</Text>
-                          </View>
-                        </View>
                       </View>
-                    );
-                  })
-                )}
-              </View>
-            </ScrollView>
-          </View>
+                      <View style={[styles.cardBadge, { backgroundColor: est.bg }]}>
+                        <Text style={[styles.cardBadgeText, { color: est.color, fontSize: text(9) }]}>
+                          {est.label}
+                        </Text>
+                      </View>
+                    </View>
 
-          {/* Buttons */}
+                    {s.autor && (
+                      <Text style={[styles.cardAutor, { color: t.textMuted, fontSize: text(11) }]}>
+                        {s.autor}
+                      </Text>
+                    )}
+
+                    <View style={[styles.cardDivider, { backgroundColor: t.divider }]} />
+
+                    <View style={styles.cardInfo}>
+                      <View style={styles.infoRow}>
+                        <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>SOLICITUD #</Text>
+                        <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>{s.id}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>FECHA</Text>
+                        <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
+                          {fmtFecha(s.fecha_solicitud) || 'N/A'}
+                        </Text>
+                      </View>
+                      {s.fecha_aprobacion && (
+                        <View style={styles.infoRow}>
+                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>APROBACIÓN</Text>
+                          <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
+                            {fmtFecha(s.fecha_aprobacion)}
+                          </Text>
+                        </View>
+                      )}
+                      {s.fecha_limite_devolucion && (
+                        <View style={styles.infoRow}>
+                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>LÍMITE DEV.</Text>
+                          <Text style={[styles.infoValue, { color: t.textSecondary, fontSize: text(12) }]}>
+                            {fmtFecha(s.fecha_limite_devolucion)}
+                          </Text>
+                        </View>
+                      )}
+                      {s.fecha_devolucion_real && (
+                        <View style={styles.infoRow}>
+                          <Text style={[styles.infoLabel, { color: t.textMuted, fontSize: text(10) }]}>DEVUELTO</Text>
+                          <Text style={[styles.infoValue, { color: t.success || '#22c55e', fontSize: text(12) }]}>
+                            {fmtFecha(s.fecha_devolucion_real)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {s.estado_asistencia_id === 1 && (
+                      <TouchableOpacity
+                        style={[styles.cancelBtn, { backgroundColor: t.dangerBg || '#ef444422', borderColor: t.danger || '#ef4444' }]}
+                        onPress={() => setCancelModal(s)}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={{ fontSize: 14, marginRight: 6 }}>✕</Text>
+                        <Text style={[styles.cancelBtnText, { color: t.danger || '#ef4444', fontSize: text(12) }]}>Cancelar solicitud</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.refreshBtn, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}
             onPress={fetchPrestamos}
@@ -155,9 +224,42 @@ const Prestamos = ({ navigation }) => {
           >
             <Text style={[styles.backBtnText, { color: t.btnPrimaryText, fontSize: text(15) }]}>← Regresar al Menú</Text>
           </TouchableOpacity>
-
         </View>
       </ScrollView>
+
+      <Modal visible={!!cancelModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+            <Text style={[styles.modalTitle, { color: t.textPrimary }]}>Cancelar Solicitud</Text>
+            <View style={[styles.modalDivider, { backgroundColor: t.divider }]} />
+            <Text style={[styles.modalBody, { color: t.textSecondary }]}>
+              ¿Estás seguro de cancelar la solicitud <Text style={{ fontWeight: '700', color: t.textPrimary }}>#{cancelModal?.id}</Text>?
+            </Text>
+            {cancelModal?.titulo && (
+              <Text style={[styles.modalDetail, { color: t.textMuted }]}>
+                Libro: {cancelModal.titulo}
+              </Text>
+            )}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { borderColor: t.btnSecondaryBorder, borderWidth: 1.5 }]}
+                onPress={() => setCancelModal(null)}
+              >
+                <Text style={[styles.modalBtnText, { color: t.textSecondary }]}>Cerrar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnDanger, { backgroundColor: t.danger || '#ef4444' }]}
+                disabled={submitting}
+                onPress={handleCancel}
+              >
+                {submitting
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Sí, cancelar</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -170,33 +272,56 @@ const styles = StyleSheet.create({
 
   content: { paddingTop: 54, paddingBottom: 40 },
 
-  headerSection: { alignItems: 'center', marginBottom: 28 },
+  headerSection: { alignItems: 'center', marginBottom: 24 },
   headerIcon: { width: 68, height: 68, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { fontWeight: '700', letterSpacing: 0.4 },
   subtitle: { fontSize: 13, marginTop: 6 },
   divider: { height: 3, width: 44, borderRadius: 2, marginTop: 14 },
 
-  tableWrap: { borderRadius: 14, overflow: 'hidden', borderWidth: 1, marginBottom: 20 },
-  tableHead: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 4, borderBottomWidth: 1 },
-  th: { width: 88, fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.3 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', minHeight: 52, paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1 },
-  td: { textAlign: 'center', paddingHorizontal: 2 },
+  infoBanner: { borderRadius: 12, padding: 12, borderWidth: 1, marginBottom: 16 },
+  infoBannerText: { fontSize: 12, fontWeight: '500' },
 
-  cSmall: { width: 70, paddingHorizontal: 4 },
-  cMed: { width: 88, paddingHorizontal: 4 },
+  emptyState: { padding: 40, alignItems: 'center' },
+  emptyText: { fontSize: 14, fontWeight: '500', textAlign: 'center' },
 
-  resourceBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  resourceText: { fontWeight: '700' },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  statusText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  list: { gap: 14, marginBottom: 20 },
 
-  emptyState: { padding: 36, alignItems: 'center' },
-  emptyText: { fontSize: 13, fontWeight: '500', textAlign: 'center' },
+  card: { borderRadius: 16, padding: 16, borderWidth: 1 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardTopLeft: { flex: 1, marginRight: 10 },
+  cardTitle: { fontWeight: '700' },
+  cardBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  cardBadgeText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  cardAutor: { marginTop: 4, fontStyle: 'italic' },
+  cardDivider: { height: 1, marginVertical: 12 },
 
-  refreshBtn: { borderRadius: 12, borderWidth: 1, paddingVertical: 14, alignItems: 'center', marginBottom: 10 },
+  cardInfo: { gap: 6 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  infoLabel: { fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
+  infoValue: { fontWeight: '500' },
+
+  cancelBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 10, paddingVertical: 10, marginTop: 12,
+    borderWidth: 1,
+  },
+  cancelBtnText: { fontWeight: '700' },
+
+  refreshBtn: { borderRadius: 14, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 12 },
   refreshBtnText: { fontWeight: '600' },
-  backBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  backBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
   backBtnText: { fontWeight: '600' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  modalCard: { width: '100%', borderRadius: 20, padding: 24, borderWidth: 1 },
+  modalTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  modalDivider: { width: 36, height: 3, borderRadius: 2, alignSelf: 'center', marginVertical: 12 },
+  modalBody: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 8 },
+  modalDetail: { fontSize: 12, textAlign: 'center', marginBottom: 20 },
+  modalActions: { flexDirection: 'row', gap: 12 },
+  modalBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  modalBtnDanger: {},
+  modalBtnText: { fontWeight: '700', fontSize: 14 },
 });
 
 export default Prestamos;

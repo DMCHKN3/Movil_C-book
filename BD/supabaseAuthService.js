@@ -322,6 +322,111 @@ export async function reenviarConfirmacion(correo) {
     }
 }
 
+export async function buscarCorreoPorBoleta(boleta) {
+    try {
+        const { data, error } = await supabase
+            .from('usuarios_web_movil')
+            .select('correo')
+            .eq('boleta', parseInt(boleta))
+            .single();
+
+        if (error || !data) {
+            return { ok: false, message: 'No se encontró una cuenta con esa boleta' };
+        }
+
+        return { ok: true, correo: data.correo };
+    } catch {
+        return { ok: false, message: 'Error al buscar la boleta' };
+    }
+}
+
+export async function iniciarSesionConBoleta(boleta, password) {
+    try {
+        if (!boleta || !password) {
+            return { ok: false, message: 'Por favor ingresa boleta y contraseña' };
+        }
+
+        const regexBoleta = /^[0-9]{10}$/;
+        if (!regexBoleta.test(boleta)) {
+            return { ok: false, message: 'La boleta debe ser de exactamente 10 dígitos' };
+        }
+
+        const regexPassword = /^[A-Za-z0-9\-_.,"#%]{7,16}$/;
+        if (!regexPassword.test(password)) {
+            return { ok: false, message: 'La contraseña debe tener entre 7 y 16 caracteres' };
+        }
+
+        const busqueda = await buscarCorreoPorBoleta(boleta);
+        if (!busqueda.ok) {
+            return busqueda;
+        }
+
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: busqueda.correo,
+            password: password
+        });
+
+        if (authError) {
+            if (authError.message.includes('Invalid login credentials')) {
+                return { ok: false, message: 'Boleta o contraseña incorrectos' };
+            }
+            if (authError.message.includes('Email not confirmed')) {
+                return {
+                    ok: false,
+                    message: 'Por favor confirma tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.',
+                    needsEmailConfirmation: true,
+                    correo: busqueda.correo
+                };
+            }
+            return { ok: false, message: authError.message || 'Error al iniciar sesión' };
+        }
+
+        const perfil = {
+            boleta: parseInt(boleta),
+            correo: authData.user?.email,
+            id: authData.user?.id,
+            email_confirmed: authData.user?.email_confirmed_at ? true : false
+        };
+
+        return {
+            ok: true,
+            user: authData.user,
+            perfil: perfil,
+            session: authData.session,
+            message: 'Sesión iniciada exitosamente'
+        };
+    } catch {
+        return { ok: false, message: 'Error inesperado al iniciar sesión' };
+    }
+}
+
+export async function solicitarRecuperacionContrasena(boleta) {
+    try {
+        const regexBoleta = /^[0-9]{10}$/;
+        if (!regexBoleta.test(boleta)) {
+            return { ok: false, message: 'La boleta debe ser de exactamente 10 dígitos' };
+        }
+
+        const busqueda = await buscarCorreoPorBoleta(boleta);
+        if (!busqueda.ok) {
+            return busqueda;
+        }
+
+        const { error } = await supabase.auth.resetPasswordForEmail(busqueda.correo);
+
+        if (error) {
+            return { ok: false, message: error.message || 'Error al enviar el correo de recuperación' };
+        }
+
+        return {
+            ok: true,
+            message: 'Revisa tu correo electrónico para las instrucciones de recuperación.'
+        };
+    } catch {
+        return { ok: false, message: 'Error inesperado al solicitar recuperación' };
+    }
+}
+
 // Nota: Verificación de sesión y listeners no son necesarios
 // La sesión se maneja localmente con AsyncStorage en UserContext.js
 
@@ -333,5 +438,8 @@ export default {
     verificarBoletaExiste,
     verificarCuentaExistente,
     validarDatosRegistro,
-    insertTablaUsuarios
+    insertTablaUsuarios,
+    iniciarSesionConBoleta,
+    solicitarRecuperacionContrasena,
+    buscarCorreoPorBoleta
 };

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, BackHandler, ScrollView, StatusBar,
+  Alert, ActivityIndicator, BackHandler, ScrollView, StatusBar, Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
-import { iniciarSesionConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
+import { iniciarSesionConBoleta, reenviarConfirmacion } from '../../BD/supabaseAuthService';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import SlideToUnlock from 'react-native-slide-to-unlock';
@@ -14,7 +14,7 @@ import SlideToUnlock from 'react-native-slide-to-unlock';
 const IniciarSesion = ({ navigation }) => {
   const { login } = useUser();
   const { theme, isDark, toggleTheme } = useTheme();
-  const [correo, setCorreo] = useState('');
+  const [boleta, setBoleta] = useState('');
   const [contra, setContra] = useState('');
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [mantenerSesion, setMantenerSesion] = useState(false);
@@ -30,14 +30,19 @@ const IniciarSesion = ({ navigation }) => {
   );
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     if (isLoading) return;
     if (!captchaVerif) {
       Alert.alert('Verificación requerida', 'Por favor completa la verificación deslizando el control.');
       return;
     }
+    if (!/^\d{10}$/.test(boleta)) {
+      Alert.alert('Error', 'La boleta debe tener 10 dígitos');
+      return;
+    }
     setIsLoading(true);
     try {
-      const resultado = await iniciarSesionConAuth(correo, contra);
+      const resultado = await iniciarSesionConBoleta(boleta, contra);
       if (resultado.ok) {
         login(resultado.user, resultado.perfil);
         if (mantenerSesion) {
@@ -50,13 +55,13 @@ const IniciarSesion = ({ navigation }) => {
         }
         Alert.alert('Éxito', 'Sesión iniciada correctamente', [{
           text: 'OK',
-          onPress: () => { setCorreo(''); setContra(''); navigation.navigate('Main'); },
+          onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },
         }]);
       } else {
         if (resultado.needsEmailConfirmation) {
           Alert.alert('Correo no confirmado', resultado.message, [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Reenviar correo', onPress: () => handleReenviarCorreo(correo) },
+            { text: 'Reenviar correo', onPress: () => handleReenviarCorreo(resultado.correo) },
           ]);
         } else {
           Alert.alert('Error', resultado.message || 'Error al iniciar sesión');
@@ -70,7 +75,7 @@ const IniciarSesion = ({ navigation }) => {
   };
 
   const handleReenviarCorreo = async (email) => {
-    if (!email) { Alert.alert('Error', 'Por favor ingresa tu correo'); return; }
+    if (!email) { Alert.alert('Error', 'No hay correo disponible'); return; }
     setIsLoading(true);
     try {
       const res = await reenviarConfirmacion(email);
@@ -88,13 +93,11 @@ const IniciarSesion = ({ navigation }) => {
     <View style={[styles.root, { backgroundColor: t.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
 
-      {/* Theme toggle */}
       <TouchableOpacity style={styles.themeBtn} onPress={toggleTheme}>
         <Text style={[styles.themeBtnText, { color: t.textMuted }]}>{isDark ? '☀' : '⏾'}</Text>
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Logo / Branding */}
         <View style={styles.brandSection}>
           <View style={[styles.logoBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
             <Text style={styles.logoEmoji}>📚</Text>
@@ -103,29 +106,26 @@ const IniciarSesion = ({ navigation }) => {
           <Text style={[styles.appTagline, { color: t.textMuted }]}>Sistema de biblioteca</Text>
         </View>
 
-        {/* Card */}
         <View style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
           <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Iniciar Sesión</Text>
           <View style={[styles.titleBar, { backgroundColor: t.divider }]} />
 
-          {/* Correo */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: t.textMuted }]}>CORREO ELECTRÓNICO</Text>
+            <Text style={[styles.label, { color: t.textMuted }]}>NÚMERO DE BOLETA</Text>
             <View style={[styles.inputWrap, { backgroundColor: t.bgInput, borderColor: t.border }]}>
-              <Text style={styles.inputIcon}>✉</Text>
+              <Text style={styles.inputIcon}>🎫</Text>
               <TextInput
                 style={[styles.input, { color: t.textPrimary, fontSize: text(15) }]}
-                placeholder="ejemplo@correo.com"
+                placeholder="Ej: 2023630001"
                 placeholderTextColor={t.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={correo}
-                onChangeText={setCorreo}
+                keyboardType="number-pad"
+                maxLength={10}
+                value={boleta}
+                onChangeText={(val) => setBoleta(val.replace(/[^0-9]/g, ''))}
               />
             </View>
           </View>
 
-          {/* Contraseña */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: t.textMuted }]}>CONTRASEÑA</Text>
             <View style={[styles.inputWrap, { backgroundColor: t.bgInput, borderColor: t.border }]}>
@@ -141,7 +141,6 @@ const IniciarSesion = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Opciones */}
           <View style={styles.optionsRow}>
             <TouchableOpacity style={styles.checkRow} onPress={() => setMostrarContrasena(!mostrarContrasena)}>
               <View style={[styles.checkbox, { borderColor: t.accent }, mostrarContrasena && { backgroundColor: t.accent }]}>
@@ -158,7 +157,6 @@ const IniciarSesion = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Captcha */}
           <SlideToUnlock
             onEndReached={() => setCaptchaVerif(true)}
             containerStyle={[styles.captcha, { backgroundColor: t.bgInput, borderColor: t.border, height: vs(56) }]}
@@ -173,7 +171,6 @@ const IniciarSesion = ({ navigation }) => {
             </Text>
           </SlideToUnlock>
 
-          {/* Botón principal */}
           <TouchableOpacity
             style={[styles.btnPrimary, { backgroundColor: t.btnPrimary }, isLoading && styles.btnDisabled]}
             onPress={handleLogin}
@@ -185,7 +182,14 @@ const IniciarSesion = ({ navigation }) => {
               : <Text style={[styles.btnPrimaryText, { color: t.btnPrimaryText, fontSize: text(15) }]}>Iniciar Sesión</Text>}
           </TouchableOpacity>
 
-          {/* Botón secundario */}
+          <TouchableOpacity
+            style={[styles.forgotBtn]}
+            onPress={() => navigation.navigate('RecuperarContra')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.forgotText, { color: t.textMuted, fontSize: text(12) }]}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.btnSecondary, { borderColor: t.btnSecondaryBorder }]}
             onPress={() => navigation.navigate('CrearAcc')}
@@ -241,16 +245,18 @@ const styles = StyleSheet.create({
   captcha: {
     width: '100%', borderRadius: 12, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 20, overflow: 'hidden',
+    marginBottom: 12, overflow: 'hidden',
   },
   captchaText: { fontWeight: '600', textAlign: 'center' },
   slider: { width: 48, height: '100%', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   sliderArrow: { color: '#fff', fontWeight: 'bold' },
   btnPrimary: {
     height: 52, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
   btnPrimaryText: { fontWeight: '700', letterSpacing: 0.3 },
+  forgotBtn: { alignItems: 'center', paddingVertical: 10, marginBottom: 8 },
+  forgotText: { fontWeight: '500', textDecorationLine: 'underline' },
   btnSecondary: {
     height: 52, borderRadius: 12, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',

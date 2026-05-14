@@ -1,29 +1,106 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, StatusBar } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, ActivityIndicator, StatusBar, Modal, Alert,
+} from 'react-native';
 import useScale from '../hooks/useScale';
-import { getLibros } from '../../tablas/libros';
+import { getEjemplaresConLibros, getLibrosMasSolicitados } from '../../tablas/libros';
+import { crearSolicitudLibro, contarSolicitudesActivas } from '../../tablas/solicitudesAcciones';
+import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+
+const MAX_LIBROS = 3;
 
 const Biblioteca = ({ navigation }) => {
   const { theme, isDark } = useTheme();
-  const [libros, setLibros] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getUserBoleta, isAuthenticated } = useUser();
   const { s, vs, text } = useScale();
+  const boleta = getUserBoleta();
+
+  const [items, setItems] = useState([]);
+  const [masSolicitados, setMasSolicitados] = useState([]);
+  const [activasCount, setActivasCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
+  const [filterDisp, setFilterDisp] = useState('');
+
+  const [confirmItem, setConfirmItem] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
   const t = theme;
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        setLibros(await getLibros());
-      } catch (err) {
-        console.error('Error cargando libros:', err);
-      } finally {
-        setLoading(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [ejemplares, masSol, activas] = await Promise.all([
+        getEjemplaresConLibros(),
+        getLibrosMasSolicitados(),
+        isAuthenticated() && boleta ? contarSolicitudesActivas(boleta) : Promise.resolve(0),
+      ]);
+      setItems(ejemplares);
+      setMasSolicitados(masSol);
+      setActivasCount(activas);
+    } catch (err) {
+      console.error('Error cargando biblioteca:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [boleta, isAuthenticated]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const tipos = useMemo(() => {
+    return [...new Set(items.map(b => b.libros?.tipo_material).filter(Boolean))];
+  }, [items]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return items.filter(b => {
+      const titulo = (b.libros?.titulo || '').toLowerCase();
+      const autor = (b.libros?.autor || '').toLowerCase();
+      const isbn = (b.libros?.isbn || '').toLowerCase();
+      const clasificacion = (b.libros?.clasificacion || '').toLowerCase();
+      const tipo = b.libros?.tipo_material || '';
+      const disponible = b.Disponible;
+
+      if (q && !(
+        titulo.includes(q) || autor.includes(q) ||
+        isbn.includes(q) || clasificacion.includes(q)
+      )) return false;
+
+      if (filterTipo && tipo !== filterTipo) return false;
+      if (filterDisp === 'si' && !disponible) return false;
+      if (filterDisp === 'no' && disponible) return false;
+
+      return true;
+    });
+  }, [items, search, filterTipo, filterDisp]);
+
+  const handleSolicitar = async () => {
+    if (!confirmItem || submitting) return;
+    setSubmitting(true);
+    try {
+      const resultado = await crearSolicitudLibro(boleta, confirmItem.id);
+      if (resultado.ok) {
+        setItems(prev => prev.map(b =>
+          b.id === confirmItem.id ? { ...b, Disponible: false } : b
+        ));
+        setActivasCount(prev => prev + 1);
+        setConfirmItem(null);
+        Alert.alert('Éxito', resultado.message);
+      } else {
+        Alert.alert('Error', resultado.message);
+        setConfirmItem(null);
       }
-    };
-    fetch();
-  }, []);
+    } catch {
+      Alert.alert('Error', 'Error al crear la solicitud');
+      setConfirmItem(null);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -31,7 +108,7 @@ const Biblioteca = ({ navigation }) => {
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
         <View style={[styles.loaderCard, { backgroundColor: t.bgCard, borderColor: t.border }]}>
           <ActivityIndicator size="large" color={t.accent} />
-          <Text style={[styles.loaderText, { color: t.textSecondary }]}>Cargando libros...</Text>
+          <Text style={[styles.loaderText, { color: t.textSecondary }]}>Cargando biblioteca...</Text>
         </View>
       </View>
     );
@@ -42,61 +119,179 @@ const Biblioteca = ({ navigation }) => {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={[styles.content, { paddingHorizontal: s(20) }]}>
-
-          {/* Header */}
           <View style={styles.headerSection}>
             <View style={[styles.headerIcon, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
               <Text style={{ fontSize: 30 }}>📚</Text>
             </View>
             <Text style={[styles.title, { color: t.textPrimary, fontSize: text(24) }]}>Biblioteca</Text>
-            <Text style={[styles.subtitle, { color: t.textMuted }]}>{libros.length} libros disponibles</Text>
+            <Text style={[styles.subtitle, { color: t.textMuted }]}>Busca y solicita libros del acervo</Text>
             <View style={[styles.divider, { backgroundColor: t.divider }]} />
           </View>
 
-          {/* Table */}
-          <View style={[styles.table, { backgroundColor: t.bgCard, borderColor: t.border }]}>
-            <View style={[styles.tableHead, { backgroundColor: t.bgCardAlt, borderBottomColor: t.border }]}>
-              <Text style={[styles.th, styles.cSmall, { color: t.textMuted, fontSize: text(10) }]}>ID</Text>
-              <Text style={[styles.th, styles.cLarge, { color: t.textMuted, fontSize: text(10) }]}>Título</Text>
-              <Text style={[styles.th, styles.cMed, { color: t.textMuted, fontSize: text(10) }]}>Clasif.</Text>
-              <Text style={[styles.th, styles.cMed, { color: t.textMuted, fontSize: text(10) }]}>Tipo</Text>
-              <Text style={[styles.th, styles.cMed, { color: t.textMuted, fontSize: text(10) }]}>Autor</Text>
+          {activasCount >= MAX_LIBROS && (
+            <View style={[styles.warningBanner, { backgroundColor: t.warningBg || '#f59e0b18', borderColor: t.warning || '#f59e0b44' }]}>
+              <Text style={[styles.warningText, { color: t.warning || '#f59e0b' }]}>
+                Ya tienes {activasCount} solicitudes activas (máximo {MAX_LIBROS}). Concluye alguna antes de solicitar otro.
+              </Text>
             </View>
+          )}
 
-            {libros.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={{ fontSize: 36, marginBottom: 10, opacity: 0.6 }}>📭</Text>
-                <Text style={[styles.emptyText, { color: t.textMuted }]}>No hay libros disponibles</Text>
+          {masSolicitados.length > 0 && (
+            <View style={styles.topSection}>
+              <View style={styles.topHead}>
+                <Text style={[styles.topTitle, { color: t.accentBright, fontSize: text(13) }]}>🔥 Más solicitados</Text>
               </View>
-            ) : (
-              libros.map((libro, i) => (
-                <View
-                  key={libro.id || i}
-                  style={[styles.tableRow, { borderBottomColor: t.border }, i % 2 !== 0 && { backgroundColor: t.bgCardAlt }]}
-                >
-                  <View style={[styles.cSmall, { alignItems: 'center' }]}>
-                    <View style={[styles.idBadge, { backgroundColor: t.accentBg }]}>
-                      <Text style={[styles.idText, { color: t.accentBright, fontSize: text(10) }]}>{libro.id}</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.td, styles.cLarge, styles.tdTitle, { color: t.textPrimary, fontSize: text(11) }]}>
-                    {libro.titulo || 'N/A'}
-                  </Text>
-                  <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>
-                    {libro.clasificacion || 'N/A'}
-                  </Text>
-                  <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>
-                    {libro.tipo_material || 'N/A'}
-                  </Text>
-                  <Text style={[styles.td, styles.cMed, { color: t.textSecondary, fontSize: text(10) }]}>
-                    {libro.autor || 'N/A'}
-                  </Text>
-                </View>
-              ))
-            )}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topRow}>
+                {masSolicitados.map((b, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.topCard, { backgroundColor: t.bgCard, borderColor: t.borderStrong }]}
+                    onPress={() => {
+                      setSearch(b.titulo);
+                      setFilterTipo('');
+                      setFilterDisp('');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.topCardTitle, { color: t.textPrimary, fontSize: text(12) }]} numberOfLines={2}>
+                      {b.titulo}
+                    </Text>
+                    <Text style={[styles.topCardAutor, { color: t.textMuted, fontSize: text(10) }]} numberOfLines={1}>
+                      {b.autor}
+                    </Text>
+                    <Text style={[styles.topCardCount, { color: t.accentBright, fontSize: text(11) }]}>
+                      {b.solicitudes_count} solicitudes
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          <View style={styles.searchRow}>
+            <View style={[styles.searchInputWrap, { backgroundColor: t.bgInput, borderColor: t.border }]}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={[styles.searchInput, { color: t.textPrimary, fontSize: text(13) }]}
+                placeholder="Buscar por título, autor, ISBN..."
+                placeholderTextColor={t.textMuted}
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
           </View>
 
-          {/* Back */}
+          <View style={styles.filterChips}>
+            <Text style={[styles.filterLabel, { color: t.textMuted, fontSize: text(10) }]}>TIPO</Text>
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                style={[styles.chip, filterTipo === '' && styles.chipActive, { backgroundColor: filterTipo === '' ? t.accent : t.bgCardAlt, borderColor: t.border }]}
+                onPress={() => setFilterTipo('')}
+              >
+                <Text style={[styles.chipText, { color: filterTipo === '' ? '#fff' : t.textSecondary, fontSize: text(11) }]}>Todos</Text>
+              </TouchableOpacity>
+              {tipos.map(tipo => (
+                <TouchableOpacity
+                  key={tipo}
+                  style={[styles.chip, filterTipo === tipo && styles.chipActive, { backgroundColor: filterTipo === tipo ? t.accent : t.bgCardAlt, borderColor: t.border }]}
+                  onPress={() => setFilterTipo(filterTipo === tipo ? '' : tipo)}
+                >
+                  <Text style={[styles.chipText, { color: filterTipo === tipo ? '#fff' : t.textSecondary, fontSize: text(11) }]}>{tipo}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.filterChips}>
+            <Text style={[styles.filterLabel, { color: t.textMuted, fontSize: text(10) }]}>DISPONIBILIDAD</Text>
+            <View style={styles.chipRow}>
+              {[
+                { key: '', label: 'Todas' },
+                { key: 'si', label: 'Disponible' },
+                { key: 'no', label: 'No disponible' },
+              ].map(opt => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.chip, filterDisp === opt.key && styles.chipActive, { backgroundColor: filterDisp === opt.key ? t.accent : t.bgCardAlt, borderColor: t.border }]}
+                  onPress={() => setFilterDisp(opt.key)}
+                >
+                  <Text style={[styles.chipText, { color: filterDisp === opt.key ? '#fff' : t.textSecondary, fontSize: text(11) }]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {filtered.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={{ fontSize: 40, marginBottom: 10, opacity: 0.6 }}>📭</Text>
+              <Text style={[styles.emptyText, { color: t.textMuted }]}>No se encontraron libros</Text>
+            </View>
+          ) : (
+            <View style={styles.cardGrid}>
+              {filtered.map((b) => {
+                const disponible = b.Disponible;
+                return (
+                  <View key={b.id} style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+                    <View style={styles.cardTitleRow}>
+                      <Text style={[styles.cardTitle, { color: t.textPrimary, fontSize: text(13) }]} numberOfLines={2}>
+                        {b.libros?.titulo || 'Sin título'}
+                      </Text>
+                      <View style={[styles.badge, { backgroundColor: disponible ? (t.successBg || '#22c55e22') : (t.dangerBg || '#ef444422') }]}>
+                        <Text style={[styles.badgeText, { color: disponible ? (t.success || '#22c55e') : (t.danger || '#ef4444'), fontSize: text(9) }]}>
+                          {disponible ? 'Disponible' : 'No disponible'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.cardBody}>
+                      <Text style={[styles.cardLabel, { color: t.textMuted, fontSize: text(10) }]}>Autor</Text>
+                      <Text style={[styles.cardValue, { color: t.textSecondary, fontSize: text(11) }]} numberOfLines={1}>{b.libros?.autor || '-'}</Text>
+
+                      <Text style={[styles.cardLabel, { color: t.textMuted, fontSize: text(10) }]}>Clasificación</Text>
+                      <Text style={[styles.cardValue, { color: t.textSecondary, fontSize: text(11) }]} numberOfLines={1}>{b.libros?.clasificacion || '-'}</Text>
+
+                      <Text style={[styles.cardLabel, { color: t.textMuted, fontSize: text(10) }]}>ISBN</Text>
+                      <Text style={[styles.cardValue, { color: t.textSecondary, fontSize: text(11) }]} numberOfLines={1}>{b.libros?.isbn || '-'}</Text>
+
+                      <View style={styles.cardRow}>
+                        <View style={styles.cardCol}>
+                          <Text style={[styles.cardLabel, { color: t.textMuted, fontSize: text(10) }]}>Tipo</Text>
+                          <Text style={[styles.cardValue, { color: t.textSecondary, fontSize: text(11) }]}>
+                            {b.libros?.tipo_material || '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.cardCol}>
+                          <Text style={[styles.cardLabel, { color: t.textMuted, fontSize: text(10) }]}>Ejemplar #</Text>
+                          <Text style={[styles.cardValue, { color: t.textSecondary, fontSize: text(11) }]}>
+                            {b.numero_ejemplar || '-'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.solicitarBtn,
+                        { backgroundColor: disponible ? t.btnPrimary : t.bgCardAlt },
+                        (!disponible || activasCount >= MAX_LIBROS) && styles.solicitarBtnDisabled,
+                      ]}
+                      disabled={!disponible || activasCount >= MAX_LIBROS}
+                      onPress={() => setConfirmItem(b)}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={[styles.solicitarBtnText, {
+                        color: disponible ? t.btnPrimaryText : t.textMuted,
+                        fontSize: text(12),
+                      }]}>
+                        {activasCount >= MAX_LIBROS ? 'Límite alcanzado' : 'Solicitar'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: t.btnPrimary }]}
             onPress={() => navigation.navigate('Main')}
@@ -104,9 +299,40 @@ const Biblioteca = ({ navigation }) => {
           >
             <Text style={[styles.backBtnText, { color: t.btnPrimaryText, fontSize: text(15) }]}>← Regresar al Menú</Text>
           </TouchableOpacity>
-
         </View>
       </ScrollView>
+
+      <Modal visible={!!confirmItem} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+            <Text style={[styles.modalTitle, { color: t.textPrimary }]}>Confirmar Solicitud</Text>
+            <View style={[styles.modalDivider, { backgroundColor: t.divider }]} />
+            <Text style={[styles.modalBody, { color: t.textSecondary }]}>
+              ¿Deseas solicitar el libro <Text style={{ fontWeight: '700', color: t.textPrimary }}>{confirmItem?.libros?.titulo || ''}</Text>?
+            </Text>
+            <Text style={[styles.modalDetail, { color: t.textMuted }]}>
+              Autor: {confirmItem?.libros?.autor || '-'} | ISBN: {confirmItem?.libros?.isbn || '-'}
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel, { borderColor: t.btnSecondaryBorder }]}
+                onPress={() => setConfirmItem(null)}
+              >
+                <Text style={[styles.modalBtnText, { color: t.textSecondary }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnConfirm, { backgroundColor: t.btnPrimary }]}
+                disabled={submitting}
+                onPress={handleSolicitar}
+              >
+                {submitting
+                  ? <ActivityIndicator color={t.btnPrimaryText} size="small" />
+                  : <Text style={[styles.modalBtnText, { color: t.btnPrimaryText }]}>Confirmar</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -119,31 +345,70 @@ const styles = StyleSheet.create({
 
   content: { paddingTop: 54, paddingBottom: 40 },
 
-  headerSection: { alignItems: 'center', marginBottom: 28 },
+  headerSection: { alignItems: 'center', marginBottom: 24 },
   headerIcon: { width: 68, height: 68, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { fontWeight: '700', letterSpacing: 0.4 },
-  subtitle: { fontSize: 13, marginTop: 6 },
+  subtitle: { fontSize: 13, marginTop: 6, textAlign: 'center' },
   divider: { height: 3, width: 44, borderRadius: 2, marginTop: 14 },
 
-  table: { borderRadius: 14, overflow: 'hidden', borderWidth: 1, marginBottom: 24 },
-  tableHead: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1 },
-  th: { fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.3 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', minHeight: 54, paddingVertical: 10, paddingHorizontal: 8, borderBottomWidth: 1 },
-  td: { textAlign: 'center', paddingHorizontal: 2 },
-  tdTitle: { fontWeight: '600' },
+  warningBanner: { borderRadius: 12, padding: 12, borderWidth: 1, marginBottom: 16 },
+  warningText: { fontSize: 12, fontWeight: '500', lineHeight: 18 },
 
-  cSmall: { flex: 0.6, paddingHorizontal: 2 },
-  cMed: { flex: 1.1, paddingHorizontal: 2 },
-  cLarge: { flex: 1.8, paddingHorizontal: 2 },
+  topSection: { marginBottom: 20 },
+  topHead: { marginBottom: 10 },
+  topTitle: { fontWeight: '700' },
+  topRow: { gap: 10, paddingRight: 20 },
+  topCard: { width: 150, borderRadius: 12, padding: 12, borderWidth: 1 },
+  topCardTitle: { fontWeight: '600', marginBottom: 4 },
+  topCardAutor: { marginBottom: 6 },
+  topCardCount: { fontWeight: '700' },
 
-  idBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
-  idText: { fontWeight: '700' },
+  searchRow: { marginBottom: 12 },
+  searchInputWrap: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, paddingHorizontal: 12 },
+  searchIcon: { fontSize: 14, marginRight: 8 },
+  searchInput: { flex: 1, height: 44 },
+
+  filterChips: { marginBottom: 12 },
+  filterLabel: { fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6, marginLeft: 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  chipActive: { borderColor: 'transparent' },
+  chipText: { fontWeight: '600' },
 
   emptyState: { padding: 40, alignItems: 'center' },
-  emptyText: { fontSize: 14, fontWeight: '500' },
+  emptyText: { fontSize: 14, fontWeight: '500', textAlign: 'center' },
+
+  cardGrid: { gap: 14, marginBottom: 20 },
+  card: { borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
+  cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 14, paddingBottom: 8 },
+  cardTitle: { flex: 1, fontWeight: '700', marginRight: 8 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  badgeText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+
+  cardBody: { paddingHorizontal: 14, paddingBottom: 10, gap: 2 },
+  cardLabel: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 4 },
+  cardValue: { fontWeight: '500' },
+  cardRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
+  cardCol: { flex: 1 },
+
+  solicitarBtn: { marginHorizontal: 14, marginBottom: 14, borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  solicitarBtnDisabled: { opacity: 0.5 },
+  solicitarBtnText: { fontWeight: '700', letterSpacing: 0.3 },
 
   backBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
   backBtnText: { fontWeight: '600' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  modalCard: { width: '100%', borderRadius: 20, padding: 24, borderWidth: 1 },
+  modalTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  modalDivider: { width: 36, height: 3, borderRadius: 2, alignSelf: 'center', marginVertical: 12 },
+  modalBody: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 8 },
+  modalDetail: { fontSize: 12, textAlign: 'center', marginBottom: 20 },
+  modalActions: { flexDirection: 'row', gap: 12 },
+  modalBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  modalBtnCancel: { borderWidth: 1.5 },
+  modalBtnConfirm: {},
+  modalBtnText: { fontWeight: '700', fontSize: 14 },
 });
 
 export default Biblioteca;
