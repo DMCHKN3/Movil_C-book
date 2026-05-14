@@ -44,18 +44,23 @@ export function validarDatosRegistro(boleta, correo, password, confirmPassword) 
     }
 
     // Validar correo electrónico
-    const regexCorreo = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,100}$/;
+    const allowAnyEmail = process.env.EXPO_PUBLIC_ALLOW_ANY_EMAIL === 'true';
+    let regexCorreo;
+    if (allowAnyEmail) {
+        // Regex básico para cualquier email (para pruebas)
+        regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    } else {
+        // Solo dominio @alumno.ipn.mx
+        regexCorreo = /^[a-zA-Z0-9._%+-]+@alumno\.ipn\.mx$/;
+    }
     if (!correo || !regexCorreo.test(correo)) {
         errores.push('El correo electrónico no tiene un formato válido');
     }
 
-    // Validar contraseña
-    if (!password || password.length < 6) {
-        errores.push('La contraseña debe tener al menos 6 caracteres');
-    }
-
-    if (password.length > 16) {
-        errores.push('La contraseña no puede tener más de 16 caracteres');
+    // Validar contraseña: entre 7 y 16 caracteres, y debe incluir letras, números y símbolos -_.,"#%
+    const regexPassword = /^[A-Za-z0-9\-_.,"#%]{7,16}$/;
+    if (!password || !regexPassword.test(password)) {
+        errores.push('La contraseña debe tener entre 7 y 16 caracteres y contener letras, números y símbolos -_.,"#%');
     }
 
     // Validar confirmación de contraseña
@@ -206,13 +211,22 @@ export async function iniciarSesionConAuth(correo, password) {
             return { ok: false, message: 'Por favor ingresa correo y contraseña' };
         }
 
-        const regexCorreo = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,100}$/;
+        const allowAnyEmail = process.env.EXPO_PUBLIC_ALLOW_ANY_EMAIL === 'true';
+        let regexCorreo;
+        if (allowAnyEmail) {
+            // Regex básico para cualquier email (para pruebas)
+            regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        } else {
+            // Solo dominio @alumno.ipn.mx
+            regexCorreo = /^[a-zA-Z0-9._%+-]+@alumno\.ipn\.mx$/;
+        }
         if (!regexCorreo.test(correo)) {
             return { ok: false, message: 'El formato del correo electrónico no es válido' };
         }
 
-        if (password.length < 6) {
-            return { ok: false, message: 'La contraseña debe tener al menos 6 caracteres' };
+        const regexPassword = /^[A-Za-z0-9\-_.,"#%]{7,16}$/;
+        if (!password || !regexPassword.test(password)) {
+            return { ok: false, message: 'La contraseña debe tener entre 7 y 16 caracteres y contener letras, números y símbolos -_.,"#%' };
         }
 
         // Iniciar sesión con Supabase Auth

@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { iniciarSesion } from '../../BD/authService';
+import { iniciarSesion } from '../../BD/supabaseAuthService';
 
 export const validarLogin = (user, contra, setLoggedIn) => {
     const resUser = /^[0-9]{10}$/;

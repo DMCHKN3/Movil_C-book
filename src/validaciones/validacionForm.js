@@ -1,10 +1,10 @@
 import { Alert } from "react-native";
-import { verifBoleta } from "../../BD/authService"; //
+import { verifBoleta } from "../../BD/supabaseAuthService"; //
 
 export const validarform = (user, contra, repcontra, correo) => {
     const resUser = /^[0-9]{10}$/;
     const resContra = /^[A-Za-z0-9\-_.,"#%]{7,16}$/;
-    const resCorreo = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,100}$/;
+    const resCorreo = /^[a-zA-Z0-9._%+-]+@alumno.ipn.mx{2,100}$/;
 
     if (!user || !contra || !correo || !repcontra) {
         Alert.alert('Error', 'Por favor complete todos los campos');
@@ -17,7 +17,7 @@ export const validarform = (user, contra, repcontra, correo) => {
     }
 
     if (!resCorreo.test(correo)) {
-        Alert.alert('Error', 'El correo debe de tener un formato válido (ejemplo@dominio.com)');
+        Alert.alert('Error', 'El correo debe de tener un formato válido (ejemplo@alumno.ipn.mx)');
         return false;
     }
     
