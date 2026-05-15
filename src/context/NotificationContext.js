@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { savePushToken, removePushToken } from '../services/notificationService';
 import { useUser } from './UserContext';
 
@@ -62,7 +63,9 @@ export const NotificationProvider = ({ children }) => {
       }
 
       try {
-        const tokenData = await Notifications.getExpoPushTokenAsync();
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: Constants.expoConfig?.extra?.eas?.projectId,
+        });
         tokenRef.current = tokenData.data;
 
         if (isMounted) {
@@ -101,12 +104,8 @@ export const NotificationProvider = ({ children }) => {
 
     return () => {
       isMounted = false;
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
     };
   }, [perfil?.boleta]);
 

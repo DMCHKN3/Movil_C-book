@@ -13,13 +13,23 @@ const STATUS_LABELS = {
 }
 
 serve(async (req) => {
-  const payload = await req.json()
+  const webhookPayload = await req.json()
 
-  if (payload.estado_anterior === payload.estado_nuevo) {
+  const { record, old_record } = webhookPayload
+
+  if (!record || !old_record) {
+    return new Response(JSON.stringify({ sent: 0, reason: 'invalid_webhook_format' }), { status: 400 })
+  }
+
+  const estadoAnterior = old_record.estado_asistencia_id
+  const estadoNuevo = record.estado_asistencia_id
+
+  if (estadoAnterior === estadoNuevo) {
     return new Response(JSON.stringify({ sent: 0, reason: 'no_change' }), { status: 200 })
   }
 
-  const estadoLabel = STATUS_LABELS[payload.estado_nuevo] || 'Desconocido'
+  const estadoLabel = STATUS_LABELS[estadoNuevo] || 'Desconocido'
+  const usuarioBoleta = Number(record.usuario_boleta)
 
   const headers = {
     'apikey': SUPABASE_SERVICE_KEY,
@@ -28,11 +38,11 @@ serve(async (req) => {
 
   const [ejemplarRes, tokensRes] = await Promise.all([
     fetch(
-      `${SUPABASE_URL}/rest/v1/ejemplares?id=eq.${payload.ejemplar_id}&select=libros(titulo)`,
+      `${SUPABASE_URL}/rest/v1/ejemplares?id=eq.${record.ejemplar_id}&select=libros(titulo)`,
       { headers }
     ),
     fetch(
-      `${SUPABASE_URL}/rest/v1/push_tokens?usuario_boleta=eq.${payload.usuario_boleta}&select=token`,
+      `${SUPABASE_URL}/rest/v1/push_tokens?usuario_boleta=eq.${usuarioBoleta}&select=token`,
       { headers }
     ),
   ])
@@ -55,7 +65,7 @@ serve(async (req) => {
     body: `Tu solicitud de "${titulo}" ahora está: ${estadoLabel}`,
     data: {
       screen: 'Prestamos',
-      solicitudId: payload.solicitud_id,
+      solicitudId: record.id,
     },
   }))
 
