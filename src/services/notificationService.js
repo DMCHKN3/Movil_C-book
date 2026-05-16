@@ -1,33 +1,39 @@
-import { supabase } from '../../supabase'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../../supabase'
 
 export async function savePushToken(token, boleta) {
-  const { data, error } = await supabase
-    .from('push_tokens')
-    .upsert(
-      {
-        token,
-        usuario_boleta: typeof boleta === 'string' ? parseInt(boleta) : boleta,
-        updated_at: new Date().toISOString(),
+  try {
+    const url = `${supabaseUrl}/functions/v1/send-push-status`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
       },
-      { onConflict: 'token' }
-    )
-    .select();
-
-  if (error) {
-    console.error('Error saving push token:', error);
-    throw error;
+      body: JSON.stringify({
+        type: 'register',
+        token,
+        boleta: typeof boleta === 'string' ? parseInt(boleta) : boleta,
+      }),
+    })
+    const data = await res.json()
+    if (!data.ok) {
+      console.error('Error registering push token:', data.error)
+    }
+    return data
+  } catch (error) {
+    console.error('Error calling edge function for token registration:', error)
+    throw error
   }
-  return data;
 }
 
 export async function removePushToken(token) {
   const { error } = await supabase
     .from('push_tokens')
     .delete()
-    .eq('token', token);
+    .eq('token', token)
 
   if (error) {
-    console.error('Error removing push token:', error);
+    console.error('Error removing push token:', error)
   }
 }
 
@@ -38,9 +44,9 @@ export async function removeAllUserTokens(boleta) {
     .eq(
       'usuario_boleta',
       typeof boleta === 'string' ? parseInt(boleta) : boleta
-    );
+    )
 
   if (error) {
-    console.error('Error removing user tokens:', error);
+    console.error('Error removing user tokens:', error)
   }
 }

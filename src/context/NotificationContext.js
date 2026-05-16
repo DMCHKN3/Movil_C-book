@@ -27,6 +27,8 @@ Notifications.setNotificationHandler({
 export const NotificationProvider = ({ children }) => {
   const { perfil, getUserBoleta } = useUser();
   const [notificationData, setNotificationData] = useState(null);
+  const [pushStatus, setPushStatus] = useState('idle');
+  const [pushError, setPushError] = useState(null);
   const notificationListener = useRef();
   const responseListener = useRef();
   const tokenRef = useRef(null);
@@ -36,9 +38,11 @@ export const NotificationProvider = ({ children }) => {
 
     const registerForPushNotifications = async () => {
       if (!Device.isDevice) {
-        console.log('Push notifications require a physical device');
+        setPushStatus('no_device');
         return;
       }
+
+      setPushStatus('requesting_permission');
 
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
@@ -58,9 +62,11 @@ export const NotificationProvider = ({ children }) => {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('Push notification permission not granted');
+        setPushStatus('permission_denied');
         return;
       }
+
+      setPushStatus('getting_token');
 
       try {
         const tokenData = await Notifications.getExpoPushTokenAsync({
@@ -71,20 +77,31 @@ export const NotificationProvider = ({ children }) => {
         if (isMounted) {
           const boleta = getUserBoleta();
           if (boleta) {
-            await savePushToken(tokenData.data, boleta);
+            setPushStatus('registering');
+            const result = await savePushToken(tokenData.data, boleta);
+            if (result?.ok) {
+              setPushStatus('registered');
+            } else {
+              setPushStatus('error');
+              setPushError(result?.error || 'Error al guardar token');
+            }
           }
         }
       } catch (error) {
-        console.error('Error getting push token:', error);
+        setPushStatus('error');
+        setPushError(error?.message || error?.toString() || 'Error desconocido');
       }
     };
 
     const boleta = perfil?.boleta;
     if (boleta) {
       registerForPushNotifications();
-    } else if (tokenRef.current) {
-      removePushToken(tokenRef.current);
-      tokenRef.current = null;
+    } else {
+      setPushStatus('not_logged_in');
+      if (tokenRef.current) {
+        removePushToken(tokenRef.current);
+        tokenRef.current = null;
+      }
     }
 
     notificationListener.current = Notifications.addNotificationReceivedListener(
@@ -114,7 +131,9 @@ export const NotificationProvider = ({ children }) => {
   };
 
   return (
-    <NotificationContext.Provider value={{ notificationData, clearNotificationData, tokenRef }}>
+    <NotificationContext.Provider
+      value={{ notificationData, clearNotificationData, tokenRef, pushStatus, pushError }}
+    >
       {children}
     </NotificationContext.Provider>
   );

@@ -12,15 +12,45 @@ const STATUS_LABELS = {
   6: 'Devuelto',
 }
 
-serve(async (req) => {
-  const webhookPayload = await req.json()
+async function handleRegister(payload) {
+  const { token, boleta } = payload
 
-  const { record, old_record } = webhookPayload
-
-  if (!record || !old_record) {
-    return new Response(JSON.stringify({ sent: 0, reason: 'invalid_webhook_format' }), { status: 400 })
+  if (!token || !boleta) {
+    return new Response(JSON.stringify({ ok: false, error: 'token and boleta required' }), { status: 400 })
   }
 
+  const headers = {
+    'apikey': SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'resolution=merge-duplicates',
+  }
+
+  const body = {
+    token,
+    usuario_boleta: Number(boleta),
+    updated_at: new Date().toISOString(),
+  }
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/push_tokens`, {
+    method: 'POST',
+    headers: { ...headers },
+    body: JSON.stringify(body),
+  })
+
+  const resBody = await res.text()
+  console.log(`Register response: status=${res.status}, body=${resBody}`)
+
+  if (res.ok) {
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  return new Response(JSON.stringify({ ok: false, error: resBody, status: res.status }), { status: 500 })
+}
+
+async function handleWebhook(record, old_record) {
   const estadoAnterior = old_record.estado_asistencia_id
   const estadoNuevo = record.estado_asistencia_id
 
@@ -78,4 +108,19 @@ serve(async (req) => {
   return new Response(JSON.stringify({ sent: messages.length, expoResult }), {
     headers: { 'Content-Type': 'application/json' },
   })
+}
+
+serve(async (req) => {
+  const payload = await req.json()
+
+  if (payload.type === 'register') {
+    return await handleRegister(payload)
+  }
+
+  const { record, old_record } = payload
+  if (!record || !old_record) {
+    return new Response(JSON.stringify({ sent: 0, reason: 'invalid_webhook_format' }), { status: 400 })
+  }
+
+  return await handleWebhook(record, old_record)
 })

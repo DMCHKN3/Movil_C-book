@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+
 import { getEstadoGral } from '../../tablas/estado_gral';
 import { getRecientes } from '../../tablas/actvs_rec';
 import { getUsuario } from '../../tablas/cuenta';
@@ -49,6 +50,7 @@ const Main = ({ navigation }) => {
   const { s, vs, ms, text } = useScale();
   const { getUserBoleta, isAuthenticated, perfil, logout } = useUser();
   const { theme, isDark, toggleTheme } = useTheme();
+
   const [loading, setLoading] = useState(true);
   const [estadoGral, setEstadoGral] = useState([]);
   const [recientes, setRecientes] = useState([]);
@@ -149,6 +151,7 @@ const Main = ({ navigation }) => {
             </TouchableOpacity>
           </View>
           <View style={[styles.divider, { backgroundColor: t.divider }]} />
+
 
           {/* Actividades recientes */}
           <View style={styles.section}>
