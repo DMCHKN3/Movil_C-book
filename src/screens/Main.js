@@ -99,9 +99,7 @@ const Main = ({ navigation }) => {
         const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ') || u.nombre || '';
         setNombreAlumno(nombre);
       }
-      if (datosData?.length > 0) {
-        setTieneDocumentos(datosData[0].tiene_documentos);
-      }
+      setTieneDocumentos(datosData?.[0]?.tiene_documentos ?? false);
     } catch (err) {
       console.error('Error cargando datos:', err);
     }

@@ -8,6 +8,7 @@ import { getEjemplaresConLibros, getLibrosMasSolicitados } from '../../tablas/li
 import { crearSolicitudLibro, contarSolicitudesActivas } from '../../tablas/solicitudesAcciones';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { getDatos } from '../../tablas/cuenta';
 
 const MAX_LIBROS = 3;
 
@@ -20,6 +21,7 @@ const Biblioteca = ({ navigation }) => {
   const [items, setItems] = useState([]);
   const [masSolicitados, setMasSolicitados] = useState([]);
   const [activasCount, setActivasCount] = useState(0);
+  const [tieneDocumentos, setTieneDocumentos] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState('');
@@ -36,14 +38,16 @@ const Biblioteca = ({ navigation }) => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [ejemplares, masSol, activas] = await Promise.all([
+      const [ejemplares, masSol, activas, datos] = await Promise.all([
         getEjemplaresConLibros(),
         getLibrosMasSolicitados(),
         isAuthenticated() && boleta ? contarSolicitudesActivas(boleta) : Promise.resolve(0),
+        isAuthenticated() && boleta ? getDatos(boleta) : Promise.resolve(null),
       ]);
       setItems(ejemplares);
       setMasSolicitados(masSol);
       setActivasCount(activas);
+      setTieneDocumentos(datos?.[0]?.tiene_documentos ?? false);
     } catch (err) {
       console.error('Error cargando biblioteca:', err);
     } finally {
@@ -87,6 +91,11 @@ const Biblioteca = ({ navigation }) => {
 
   const handleSolicitar = async () => {
     if (!confirmItem || submitting) return;
+    if (!tieneDocumentos) {
+      Alert.alert('Permiso requerido', 'Acude a biblioteca a solicitar tu permiso para préstamo de libros');
+      setConfirmItem(null);
+      return;
+    }
     setSubmitting(true);
     try {
       const resultado = await crearSolicitudLibro(boleta, confirmItem.id);
@@ -134,6 +143,14 @@ const Biblioteca = ({ navigation }) => {
             <Text style={[styles.subtitle, { color: t.textMuted }]}>Busca y solicita libros del acervo</Text>
             <View style={[styles.divider, { backgroundColor: t.divider }]} />
           </View>
+
+          {tieneDocumentos === false && (
+            <View style={[styles.warningBanner, { backgroundColor: '#ef444418', borderColor: '#ef444444' }]}>
+              <Text style={[styles.warningText, { color: '#ef4444' }]}>
+                Acude a biblioteca a solicitar tu permiso para préstamo de libros
+              </Text>
+            </View>
+          )}
 
           {activasCount >= MAX_LIBROS && (
             <View style={[styles.warningBanner, { backgroundColor: t.warningBg || '#f59e0b18', borderColor: t.warning || '#f59e0b44' }]}>
@@ -279,11 +296,17 @@ const Biblioteca = ({ navigation }) => {
                     <TouchableOpacity
                       style={[
                         styles.solicitarBtn,
-                        { backgroundColor: disponible ? t.btnPrimary : t.bgCardAlt },
-                        (!disponible || activasCount >= MAX_LIBROS) && styles.solicitarBtnDisabled,
+                        { backgroundColor: disponible && tieneDocumentos !== false ? t.btnPrimary : t.bgCardAlt },
+                        (!disponible || activasCount >= MAX_LIBROS || tieneDocumentos !== true) && styles.solicitarBtnDisabled,
                       ]}
-                      disabled={!disponible || activasCount >= MAX_LIBROS}
-                      onPress={() => setConfirmItem(b)}
+                      disabled={!disponible || activasCount >= MAX_LIBROS || tieneDocumentos !== true}
+                      onPress={() => {
+                        if (!tieneDocumentos) {
+                          Alert.alert('Permiso requerido', 'Acude a biblioteca a solicitar tu permiso para préstamo de libros');
+                          return;
+                        }
+                        setConfirmItem(b);
+                      }}
                       activeOpacity={0.85}
                     >
                       <Text style={[styles.solicitarBtnText, {

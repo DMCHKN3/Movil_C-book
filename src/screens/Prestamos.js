@@ -7,6 +7,7 @@ import useScale from '../hooks/useScale';
 import { getSolicitudesCompletas, cancelarSolicitud } from '../../tablas/solicitudesAcciones';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { getDatos } from '../../tablas/cuenta';
 
 function getEstado(id) {
   const e = Number(id);
@@ -46,6 +47,7 @@ const Prestamos = ({ navigation }) => {
   const t = theme;
 
   const [items, setItems] = useState([]);
+  const [tieneDocumentos, setTieneDocumentos] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelModal, setCancelModal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -56,8 +58,12 @@ const Prestamos = ({ navigation }) => {
     if (!isAuthenticated() || !boleta) { setLoading(false); return; }
     try {
       setLoading(true);
-      const data = await getSolicitudesCompletas(boleta);
+      const [data, datos] = await Promise.all([
+        getSolicitudesCompletas(boleta),
+        getDatos(boleta),
+      ]);
       setItems(data);
+      setTieneDocumentos(datos?.[0]?.tiene_documentos ?? false);
     } catch (err) {
       console.error('Error cargando préstamos:', err);
     } finally {
@@ -122,6 +128,14 @@ const Prestamos = ({ navigation }) => {
             </Text>
             <View style={[styles.divider, { backgroundColor: t.divider }]} />
           </View>
+
+          {tieneDocumentos === false && (
+            <View style={[styles.infoBanner, { backgroundColor: '#ef444418', borderColor: '#ef444444' }]}>
+              <Text style={[styles.infoBannerText, { color: '#ef4444' }]}>
+                Acude a biblioteca a solicitar tu permiso para préstamo de libros
+              </Text>
+            </View>
+          )}
 
           {pendientes.length > 0 && (
             <View style={[styles.infoBanner, { backgroundColor: t.warningBg || '#f59e0b18', borderColor: t.warning || '#f59e0b44' }]}>
