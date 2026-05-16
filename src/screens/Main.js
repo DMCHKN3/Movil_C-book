@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator, BackHandler, Alert, Dimensions, StatusBar,
+  RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 
-import { getEstadoGral } from '../../tablas/estado_gral';
-import { getRecientes } from '../../tablas/actvs_rec';
-import { getUsuario } from '../../tablas/cuenta';
+import { getSolicitudesAprobadas } from '../../tablas/actvs_rec';
+import { getUsuario, getDatos } from '../../tablas/cuenta';
 import { cerrarSesionConAuth } from '../../BD/supabaseAuthService';
 
 const { width } = Dimensions.get('window');
@@ -39,22 +39,16 @@ const statusLabel = (estado) => {
   }
 };
 
-const tipoLabel = (tipo) => {
-  switch (tipo) {
-    case 'libro': return 'Préstamo de libro';
-    default: return 'Préstamo de libro';
-  }
-};
-
 const Main = ({ navigation }) => {
   const { s, vs, ms, text } = useScale();
   const { getUserBoleta, isAuthenticated, perfil, logout } = useUser();
   const { theme, isDark, toggleTheme } = useTheme();
 
   const [loading, setLoading] = useState(true);
-  const [estadoGral, setEstadoGral] = useState([]);
-  const [recientes, setRecientes] = useState([]);
+  const [aprobadas, setAprobadas] = useState([]);
+  const [tieneDocumentos, setTieneDocumentos] = useState(null);
   const [nombreAlumno, setNombreAlumno] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const registro_id = getUserBoleta();
   const cardWidth = s(180);
   const t = theme;
@@ -91,31 +85,43 @@ const Main = ({ navigation }) => {
     }, [logout, navigation])
   );
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!isAuthenticated() || !registro_id) { setLoading(false); return; }
-      try {
-        setLoading(true);
-        const [estadoData, recientesData, usuarioData] = await Promise.all([
-          getEstadoGral(registro_id),
-          getRecientes(registro_id),
-          getUsuario(registro_id),
-        ]);
-        setEstadoGral(estadoData);
-        setRecientes(recientesData);
-        if (usuarioData?.length > 0) {
-          const u = usuarioData[0];
-          const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ') || u.nombre || '';
-          setNombreAlumno(nombre);
-        }
-      } catch (err) {
-        console.error('Error cargando datos:', err);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    if (!isAuthenticated() || !registro_id) return;
+    try {
+      const [solicitudesData, usuarioData, datosData] = await Promise.all([
+        getSolicitudesAprobadas(registro_id),
+        getUsuario(registro_id),
+        getDatos(registro_id),
+      ]);
+      setAprobadas(solicitudesData);
+      if (usuarioData?.length > 0) {
+        const u = usuarioData[0];
+        const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ') || u.nombre || '';
+        setNombreAlumno(nombre);
       }
+      if (datosData?.length > 0) {
+        setTieneDocumentos(datosData[0].tiene_documentos);
+      }
+    } catch (err) {
+      console.error('Error cargando datos:', err);
+    }
+  };
+
+  useEffect(() => {
+    const initialLoad = async () => {
+      if (!isAuthenticated() || !registro_id) { setLoading(false); return; }
+      setLoading(true);
+      await fetchData();
+      setLoading(false);
     };
-    fetchData();
+    initialLoad();
   }, [registro_id]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
 
   if (loading) {
     return (
@@ -132,7 +138,10 @@ const Main = ({ navigation }) => {
   return (
     <View style={[styles.root, { backgroundColor: t.bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
         <View style={styles.content}>
 
           {/* Header */}
@@ -152,35 +161,47 @@ const Main = ({ navigation }) => {
           </View>
           <View style={[styles.divider, { backgroundColor: t.divider }]} />
 
+          {/* Estado de documentación */}
+          <View style={styles.docStatusRow}>
+            <View style={[styles.docStatusDot, {
+              backgroundColor: tieneDocumentos === true ? '#22c55e' : tieneDocumentos === false ? '#ef4444' : '#6b7280'
+            }]} />
+            <Text style={[styles.docStatusLabel, { color: t.textSecondary, fontSize: text(13) }]}>
+              Estado de documentación: {tieneDocumentos === true ? 'Activo' : tieneDocumentos === false ? 'Inactivo' : 'Cargando...'}
+            </Text>
+          </View>
 
-          {/* Actividades recientes */}
+          {/* Solicitudes Aprobadas */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={[styles.sectionIconBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
-                <Text style={styles.sectionEmoji}>📋</Text>
+                <Text style={styles.sectionEmoji}>✅</Text>
               </View>
-              <Text style={[styles.sectionTitle, { color: t.textPrimary, fontSize: text(15) }]}>Actividades Recientes</Text>
+              <Text style={[styles.sectionTitle, { color: t.textPrimary, fontSize: text(15) }]}>Solicitudes Aprobadas</Text>
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRow}>
-              {recientes.length === 0 ? (
+              {aprobadas.length === 0 ? (
                 <View style={[styles.actCard, styles.emptyCard, { width: cardWidth, backgroundColor: t.bgCard, borderColor: t.border }]}>
                   <Text style={styles.emptyEmoji}>📭</Text>
-                  <Text style={[styles.emptyText, { color: t.textMuted, fontSize: text(13) }]}>Sin actividades recientes</Text>
+                  <Text style={[styles.emptyText, { color: t.textMuted, fontSize: text(13) }]}>Sin solicitudes aprobadas</Text>
                 </View>
               ) : (
-                recientes.slice(0, 5).map((act, i) => {
+                aprobadas.slice(0, 5).map((act, i) => {
                   const color = statusColor(act.estado);
                   return (
                     <View key={i} style={[styles.actCard, { width: cardWidth, backgroundColor: t.bgCard, borderColor: t.border }]}>
-                      <View style={styles.actCardTop}>
-                        <View style={[styles.dot, { backgroundColor: color }]} />
-                        <Text style={[styles.actType, { color: t.textMuted, fontSize: text(10) }]} numberOfLines={1}>
-                          {tipoLabel(act.tipo)}
+                      <Text style={[styles.actBookTitle, { color: t.textPrimary, fontSize: text(12) }]} numberOfLines={2}>
+                        {act.titulo}
+                      </Text>
+                      <View style={styles.actCardBottom}>
+                        <View style={[styles.badge, { backgroundColor: color + '22' }]}>
+                          <Text style={[styles.badgeText, { color, fontSize: text(10) }]}>{statusLabel(act.estado)}</Text>
+                        </View>
+                        <Text style={[styles.actDate, { color: t.textMuted, fontSize: text(9) }]}>
+                          {act.fecha_solicitud ? new Date(act.fecha_solicitud).toLocaleDateString() : ''}
                         </Text>
                       </View>
-                      <Text style={[styles.actStateLabel, { color: t.textMuted, fontSize: text(11) }]}>Estado</Text>
-                      <Text style={[styles.actStateValue, { color, fontSize: text(15) }]}>{statusLabel(act.estado)}</Text>
                     </View>
                   );
                 })
@@ -188,48 +209,7 @@ const Main = ({ navigation }) => {
             </ScrollView>
           </View>
 
-          {/* Estado general */}
-          <View style={styles.section}>
-            <View style={styles.sectionHead}>
-              <View style={[styles.sectionIconBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
-                <Text style={styles.sectionEmoji}>📊</Text>
-              </View>
-              <Text style={[styles.sectionTitle, { color: t.textPrimary, fontSize: text(15) }]}>Estado General</Text>
-            </View>
 
-            <View style={[styles.table, { backgroundColor: t.bgCard, borderColor: t.border }]}>
-              <View style={[styles.tableHead, { backgroundColor: t.bgCardAlt, borderBottomColor: t.border }]}>
-                {['Solicitud', 'Fecha', 'Estado'].map((h) => (
-                  <Text key={h} style={[styles.thCell, { color: t.textMuted, flex: h === 'Solicitud' ? 1.4 : 1, fontSize: text(10) }]}>{h}</Text>
-                ))}
-              </View>
-
-              {estadoGral.length === 0 ? (
-                <View style={styles.emptyTableRow}>
-                  <Text style={[styles.emptyText, { color: t.textMuted }]}>No hay solicitudes</Text>
-                </View>
-              ) : (
-                estadoGral.map((row, i) => {
-                  const color = statusColor(row.estado);
-                  return (
-                    <View key={i} style={[styles.tableRow, { borderBottomColor: t.border }, i % 2 !== 0 && { backgroundColor: t.bgCardAlt }]}>
-                      <Text style={[styles.tdCell, { color: t.textSecondary, flex: 1.4, fontSize: text(10) }]} numberOfLines={2}>
-                        {tipoLabel(row.tipo)}
-                      </Text>
-                      <Text style={[styles.tdCell, { color: t.textSecondary, flex: 1, fontSize: text(10) }]}>
-                        {row.fecha_solicitud || 'N/A'}
-                      </Text>
-                      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                        <View style={[styles.badge, { backgroundColor: color + '22' }]}>
-                          <Text style={[styles.badgeText, { color, fontSize: text(9) }]}>{statusLabel(row.estado)}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-            </View>
-          </View>
 
           {/* Navegación */}
           <View style={styles.navButtons}>
@@ -283,22 +263,17 @@ const styles = StyleSheet.create({
   cardsRow: { paddingVertical: 4, paddingRight: 20, gap: 12 },
   actCard: { borderRadius: 16, padding: 16, borderWidth: 1, height: 120, justifyContent: 'space-between' },
   emptyCard: { alignItems: 'center', justifyContent: 'center', height: 100 },
-  actCardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  actType: { fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, flex: 1 },
-  actStateLabel: { fontWeight: '500' },
-  actStateValue: { fontWeight: '700' },
   emptyEmoji: { fontSize: 28, marginBottom: 8, opacity: 0.6 },
   emptyText: { fontWeight: '500', textAlign: 'center' },
-
-  table: { borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
-  tableHead: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1 },
-  thCell: { fontWeight: '700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.4 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingVertical: 10, paddingHorizontal: 10, borderBottomWidth: 1 },
-  tdCell: { textAlign: 'center', paddingHorizontal: 2 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   badgeText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
-  emptyTableRow: { padding: 24, alignItems: 'center' },
+
+  docStatusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 8 },
+  docStatusDot: { width: 10, height: 10, borderRadius: 5 },
+  docStatusLabel: { fontWeight: '500', letterSpacing: 0.2 },
+  actBookTitle: { fontWeight: '700', lineHeight: 18 },
+  actCardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  actDate: { fontWeight: '400' },
 
   navButtons: { gap: 10 },
   navBtn: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 14, borderWidth: 1 },

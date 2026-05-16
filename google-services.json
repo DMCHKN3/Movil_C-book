@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "663256817965",
+    "project_id": "c-book-c8162",
+    "storage_bucket": "c-book-c8162.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:663256817965:android:df841e569ad8da36c073a4",
+        "android_client_info": {
+          "package_name": "com.cbook.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDL2kHRa5KHPIPRLAkG2HGwvZqrGbbCDtI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
