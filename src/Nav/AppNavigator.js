@@ -12,6 +12,7 @@ import Main from '../screens/Main';
 import Cuenta from '../screens/Cuenta';
 import Biblioteca from '../screens/Biblioteca';
 import Prestamos from '../screens/Prestamos';
+import Soporte from '../screens/Soporte';
 import RecuperarContra from '../screens/RecuperarContra';
 
 const Stack = createNativeStackNavigator();
@@ -57,6 +58,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Cuenta" component={Cuenta} />
         <Stack.Screen name="Biblioteca" component={Biblioteca} />
         <Stack.Screen name="Prestamos" component={Prestamos} />
+        <Stack.Screen name="Soporte" component={Soporte} />
         <Stack.Screen name="RecuperarContra" component={RecuperarContra} />
       </Stack.Navigator>
     </NavigationContainer>

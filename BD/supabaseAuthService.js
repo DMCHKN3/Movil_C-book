@@ -1,9 +1,77 @@
 import { supabase } from "../supabase";////
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Servicio de autenticación con Supabase Auth
  * Maneja registro, confirmación por correo, inicio de sesión y verificaciones
  */
+
+const PENDING_REGISTRATION_KEY = '@cbook_pending_registration';
+
+async function guardarRegistroPendiente(boleta, correo) {
+    try {
+        const data = { boleta: String(boleta), correo };
+        await AsyncStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.error('Error guardando registro pendiente:', e);
+    }
+}
+
+async function obtenerRegistroPendiente(boleta) {
+    try {
+        const raw = await AsyncStorage.getItem(PENDING_REGISTRATION_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (data.boleta === String(boleta)) return data;
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+async function limpiarRegistroPendiente() {
+    try {
+        await AsyncStorage.removeItem(PENDING_REGISTRATION_KEY);
+    } catch {
+        // ignorar
+    }
+}
+
+async function asegurarUsuarioEnTabla(boleta, correo) {
+    console.log('Asegurando usuario en usuarios_web_movil:', { boleta, correo });
+    try {
+        const { data: existente, error: errorBusqueda } = await supabase
+            .from('usuarios_web_movil')
+            .select('boleta')
+            .eq('boleta', parseInt(boleta))
+            .maybeSingle();
+
+        if (errorBusqueda) {
+            console.error('Error buscando usuario en tabla:', errorBusqueda);
+            return { ok: false, message: 'Error al verificar usuario' };
+        }
+
+        if (existente) {
+            console.log('Usuario ya existe en usuarios_web_movil');
+            return { ok: true, yaExistia: true };
+        }
+
+        const { error: errorInsert } = await supabase
+            .from('usuarios_web_movil')
+            .insert([{ boleta: parseInt(boleta), correo: correo, tiene_documentos: false }]);
+
+        if (errorInsert) {
+            console.error('Error insertando usuario en tabla:', errorInsert);
+            return { ok: false, message: 'Error al activar la cuenta' };
+        }
+
+        console.log('Usuario insertado en usuarios_web_movil exitosamente');
+        return { ok: true, yaExistia: false };
+    } catch (error) {
+        console.error('Error inesperado asegurando usuario:', error);
+        return { ok: false, message: 'Error al activar la cuenta' };
+    }
+}
 
 // Función para verificar si la boleta existe en el sistema
 export async function verificarBoletaExiste(boleta) {
@@ -160,6 +228,8 @@ export async function crearCuentaConAuth(boleta, correo, password, confirmPasswo
 
         console.log('Usuario creado en Auth exitosamente:', authData.user?.id);
         console.log('Correo de confirmación enviado automáticamente a:', correo);
+
+        await guardarRegistroPendiente(boleta, correo);
 
         return {
             ok: true,
@@ -356,13 +426,27 @@ export async function iniciarSesionConBoleta(boleta, password) {
             return { ok: false, message: 'La contraseña debe tener entre 7 y 16 caracteres' };
         }
 
+        let correo = null;
+
         const busqueda = await buscarCorreoPorBoleta(boleta);
-        if (!busqueda.ok) {
-            return busqueda;
+        if (busqueda.ok) {
+            correo = busqueda.correo;
+            console.log('Correo encontrado en usuarios_web_movil:', correo);
+        } else {
+            console.log('Boleta no encontrada en usuarios_web_movil, buscando registro pendiente...');
+            const pendiente = await obtenerRegistroPendiente(boleta);
+            if (pendiente) {
+                correo = pendiente.correo;
+                console.log('Correo encontrado en registro pendiente:', correo);
+            }
+        }
+
+        if (!correo) {
+            return { ok: false, message: 'No existe una cuenta con esa boleta' };
         }
 
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: busqueda.correo,
+            email: correo,
             password: password
         });
 
@@ -375,10 +459,15 @@ export async function iniciarSesionConBoleta(boleta, password) {
                     ok: false,
                     message: 'Por favor confirma tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.',
                     needsEmailConfirmation: true,
-                    correo: busqueda.correo
+                    correo: correo
                 };
             }
             return { ok: false, message: authError.message || 'Error al iniciar sesión' };
+        }
+
+        const activacion = await asegurarUsuarioEnTabla(boleta, correo);
+        if (activacion.ok && !activacion.yaExistia) {
+            await limpiarRegistroPendiente();
         }
 
         const perfil = {
@@ -407,9 +496,14 @@ export async function solicitarRecuperacionContrasena(boleta) {
             return { ok: false, message: 'La boleta debe ser de exactamente 10 dígitos' };
         }
 
-        const busqueda = await buscarCorreoPorBoleta(boleta);
+        let busqueda = await buscarCorreoPorBoleta(boleta);
         if (!busqueda.ok) {
-            return busqueda;
+            const pendiente = await obtenerRegistroPendiente(boleta);
+            if (pendiente) {
+                busqueda = { ok: true, correo: pendiente.correo };
+            } else {
+                return busqueda;
+            }
         }
 
         const { error } = await supabase.auth.resetPasswordForEmail(busqueda.correo);

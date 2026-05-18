@@ -105,6 +105,16 @@ const Cuenta = ({ navigation }) => {
             </View>
           ))}
 
+          {/* Soporte */}
+          <TouchableOpacity
+            style={[styles.supportBtn, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}
+            onPress={() => navigation.navigate('Soporte')}
+            activeOpacity={0.85}
+          >
+            <Text style={{ fontSize: 18, marginRight: 10 }}>🛟</Text>
+            <Text style={[styles.supportText, { color: t.accentBright, fontSize: text(15) }]}>Soporte y Reportes</Text>
+          </TouchableOpacity>
+
           {/* Logout */}
           <TouchableOpacity
             style={[styles.logoutBtn, { backgroundColor: t.dangerBg, borderColor: t.danger }]}
@@ -151,6 +161,9 @@ const styles = StyleSheet.create({
   infoContent: { flex: 1 },
   infoLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
   infoValue: { fontWeight: '500' },
+
+  supportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 14, paddingVertical: 14, borderWidth: 1, marginTop: 6, marginBottom: 8 },
+  supportText: { fontWeight: '600' },
 
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 14, paddingVertical: 14, borderWidth: 1, marginTop: 6 },
   logoutText: { fontWeight: '600' },

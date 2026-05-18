@@ -4,7 +4,7 @@ import {
   Alert, ActivityIndicator, ScrollView, StatusBar,
 } from 'react-native';
 import useScale from '../hooks/useScale';
-import { crearCuentaConAuth, reenviarConfirmacion, insertTablaUsuarios } from '../../BD/supabaseAuthService';
+import { crearCuentaConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
 import { useTheme } from '../context/ThemeContext';
 
 const CrearCuenta = ({ navigation }) => {
@@ -23,23 +23,19 @@ const CrearCuenta = ({ navigation }) => {
     setIsLoading(true);
     try {
       const resultado = await crearCuentaConAuth(user, correo, contra, repcontra);
-      const tablaPersonal = await insertTablaUsuarios(user, correo);
 
-      if (!resultado.ok && !tablaPersonal.ok) {
-        Alert.alert('Error', 'Ocurrió un error al crear la cuenta. Intenta nuevamente.');
-        return;
-      } else if (!resultado.ok) {
+      if (!resultado.ok) {
         Alert.alert('Error', resultado.message || 'Error al crear la cuenta.');
-        return;
-      } else if (!tablaPersonal.ok) {
-        Alert.alert('Error', 'Cuenta creada pero ocurrió un error al guardar datos adicionales.');
         return;
       }
 
       setCorreoParaReenvio(correo);
       Alert.alert(
-        'Éxito',
-        resultado.message || 'Cuenta creada. Revisa tu correo para verificar tu cuenta.',
+        'Cuenta creada',
+        'Se envió un correo de verificación a tu dirección.\n\n' +
+        '1. Revisa tu bandeja de entrada\n' +
+        '2. Haz clic en el enlace de verificación\n' +
+        '3. Regresa aquí e inicia sesión',
         [
           { text: 'OK', onPress: () => { setUser(''); setContra(''); setRepContra(''); setCorreo(''); navigation.navigate('IniciarAcc'); } },
           { text: '¿No recibiste el correo?', onPress: () => handleReenviarCorreo(correo), style: 'cancel' },
