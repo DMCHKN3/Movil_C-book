@@ -105,6 +105,16 @@ const Cuenta = ({ navigation }) => {
             </View>
           ))}
 
+          {/* Cambiar Contraseña */}
+          <TouchableOpacity
+            style={[styles.supportBtn, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}
+            onPress={() => navigation.navigate('CambiarContra')}
+            activeOpacity={0.85}
+          >
+            <Text style={{ fontSize: 18, marginRight: 10 }}>🔑</Text>
+            <Text style={[styles.supportText, { color: t.accentBright, fontSize: text(15) }]}>Cambiar Contraseña</Text>
+          </TouchableOpacity>
+
           {/* Soporte */}
           <TouchableOpacity
             style={[styles.supportBtn, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}

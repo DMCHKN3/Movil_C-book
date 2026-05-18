@@ -215,8 +215,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, marginBottom: 14,
   },
   logoEmoji: { fontSize: 30 },
-  appName: { fontSize: 26, fontWeight: '700', letterSpacing: 0.5 },
-  appTagline: { fontSize: 13, marginTop: 4 },
+  appName: { fontSize: 26, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
+  appTagline: { fontSize: 13, marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
   card: {
     borderRadius: 20, padding: 28,
     borderWidth: 1,

@@ -152,8 +152,8 @@ const styles = StyleSheet.create({
   brandSection: { alignItems: 'center', marginBottom: 28 },
   logoBox: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 12 },
   logoEmoji: { fontSize: 28 },
-  appName: { fontSize: 24, fontWeight: '700', letterSpacing: 0.5 },
-  appTagline: { fontSize: 13, marginTop: 4 },
+  appName: { fontSize: 24, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
+  appTagline: { fontSize: 13, marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
   card: {
     borderRadius: 20, padding: 28, borderWidth: 1,
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 },

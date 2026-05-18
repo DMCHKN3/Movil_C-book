@@ -489,6 +489,40 @@ export async function iniciarSesionConBoleta(boleta, password) {
     }
 }
 
+export async function cambiarContrasenaPropia(correo, contraseñaActual, nuevaContraseña) {
+    console.log('Verificando contraseña actual antes de cambiar...');
+    try {
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+            email: correo,
+            password: contraseñaActual,
+        });
+
+        if (loginError) {
+            console.error('Error verificando contraseña actual:', loginError);
+            if (loginError.message.includes('Invalid login credentials')) {
+                return { ok: false, message: 'La contraseña actual es incorrecta' };
+            }
+            return { ok: false, message: 'Error al verificar la contraseña actual' };
+        }
+
+        console.log('Contraseña actual verificada, actualizando...');
+        const { error: updateError } = await supabase.auth.updateUser({
+            password: nuevaContraseña,
+        });
+
+        if (updateError) {
+            console.error('Error actualizando contraseña:', updateError);
+            return { ok: false, message: updateError.message || 'Error al actualizar la contraseña' };
+        }
+
+        console.log('Contraseña actualizada exitosamente');
+        return { ok: true, message: 'Contraseña actualizada exitosamente' };
+    } catch (error) {
+        console.error('Error inesperado cambiando contraseña:', error);
+        return { ok: false, message: 'Error inesperado al cambiar la contraseña' };
+    }
+}
+
 export async function solicitarRecuperacionContrasena(boleta) {
     try {
         const regexBoleta = /^[0-9]{10}$/;

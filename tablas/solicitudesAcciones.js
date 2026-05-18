@@ -89,9 +89,13 @@ export async function getSolicitudesCompletas(boleta) {
         fecha_limite_respuesta, fecha_aprobacion,
         fecha_limite_recoleccion, motivo_rechazo,
         fecha_rechazo, estado_asistencia_id,
+        fecha_devolucion_real,
         ejemplares (
           id, numero_ejemplar,
           libros ( titulo, autor, clasificacion )
+        ),
+        prestamos_libros (
+          id, estado, fecha_prestamo, fecha_devolucion
         )
       `)
       .eq('usuario_boleta', String(boleta))
@@ -107,6 +111,7 @@ export async function getSolicitudesCompletas(boleta) {
       recurso_id: s.ejemplar_id,
       titulo: s.ejemplares?.libros?.titulo || null,
       autor: s.ejemplares?.libros?.autor || null,
+      prestamo: s.prestamos_libros?.[0] || null,
     }));
   } catch {
     return [];
