@@ -1,5 +1,5 @@
 import { Alert } from "react-native";
-import { verifBoleta } from "../../BD/supabaseAuthService"; //
+import { verificarBoletaExiste } from "../../BD/supabaseAuthService";
 
 export const validarform = (user, contra, repcontra, correo) => {
     const resUser = /^[0-9]{10}$/;
@@ -47,7 +47,7 @@ export const validarformConBD = async (user, contra, repcontra, nombre, apellido
 
     // Luego verificar la boleta en la base de datos
     try {
-        const verificacion = await verifBoleta(user);
+        const verificacion = await verificarBoletaExiste(user);
         if (!verificacion.ok) {
             Alert.alert('Error', 'La boleta no está registrada en el sistema');
             return false;

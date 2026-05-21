@@ -4,17 +4,16 @@ import {
   ScrollView, ActivityIndicator, StatusBar, Modal, Alert,
 } from 'react-native';
 import useScale from '../hooks/useScale';
-import { getEjemplaresConLibros, getLibrosMasSolicitados } from '../../tablas/libros';
-import { crearSolicitudLibro, contarSolicitudesActivas } from '../../tablas/solicitudesAcciones';
+import { getBooks, getMostRequested } from '../api/booksApi';
+import { getMyRequests, createRequest } from '../api/solicitudesApi';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
-import { getDatos } from '../../tablas/cuenta';
 
 const MAX_LIBROS = 3;
 
 const Biblioteca = ({ navigation }) => {
   const { theme, isDark } = useTheme();
-  const { getUserBoleta, isAuthenticated } = useUser();
+  const { getUserBoleta, isAuthenticated, perfil } = useUser();
   const { s, vs, text } = useScale();
   const boleta = getUserBoleta();
 
@@ -38,22 +37,25 @@ const Biblioteca = ({ navigation }) => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [ejemplares, masSol, activas, datos] = await Promise.all([
-        getEjemplaresConLibros(),
-        getLibrosMasSolicitados(),
-        isAuthenticated() && boleta ? contarSolicitudesActivas(boleta) : Promise.resolve(0),
-        isAuthenticated() && boleta ? getDatos(boleta) : Promise.resolve(null),
+      const [booksRes, masSolRes, misSolicitudesRes] = await Promise.all([
+        getBooks('libro'),
+        getMostRequested(),
+        isAuthenticated() ? getMyRequests() : Promise.resolve({ data: [] }),
       ]);
+      const ejemplares = booksRes.data || [];
+      const masSol = masSolRes.data || [];
+      const solicitudes = misSolicitudesRes.data || [];
+      const activas = solicitudes.filter(s => Number(s.estado_asistencia_id) === 1).length;
       setItems(ejemplares);
       setMasSolicitados(masSol);
       setActivasCount(activas);
-      setTieneDocumentos(datos?.[0]?.tiene_documentos ?? false);
+      setTieneDocumentos(perfil?.tiene_documentos ?? false);
     } catch (err) {
       console.error('Error cargando biblioteca:', err);
     } finally {
       setLoading(false);
     }
-  }, [boleta, isAuthenticated]);
+  }, [boleta, isAuthenticated, perfil]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -92,26 +94,23 @@ const Biblioteca = ({ navigation }) => {
   const handleSolicitar = async () => {
     if (!confirmItem || submitting) return;
     if (!tieneDocumentos) {
-      Alert.alert('Permiso requerido', 'Acude a biblioteca a solicitar tu permiso para préstamo de libros');
+      Alert.alert('Permiso requerido', 'Acude a biblioteca a solicitar tu permiso para prestamo de libros');
       setConfirmItem(null);
       return;
     }
     setSubmitting(true);
     try {
-      const resultado = await crearSolicitudLibro(boleta, confirmItem.id);
-      if (resultado.ok) {
+      const resultado = await createRequest('libro', boleta, confirmItem.id);
+      if (resultado.success) {
         setItems(prev => prev.map(b =>
           b.id === confirmItem.id ? { ...b, Disponible: false } : b
         ));
         setActivasCount(prev => prev + 1);
         setConfirmItem(null);
-        Alert.alert('Éxito', resultado.message);
-      } else {
-        Alert.alert('Error', resultado.message);
-        setConfirmItem(null);
+        Alert.alert('Exito', resultado.message);
       }
-    } catch {
-      Alert.alert('Error', 'Error al crear la solicitud');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Error al crear la solicitud');
       setConfirmItem(null);
     } finally {
       setSubmitting(false);

@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  Alert, StatusBar,
+  Alert, StatusBar, ActivityIndicator,
 } from 'react-native';
 import useScale from '../hooks/useScale';
 import { useTheme } from '../context/ThemeContext';
+import { getTicketTypes, createTicket, getMyTickets } from '../api/supportApi';
+import { useUser } from '../context/UserContext';
 
-const TIPOS = [
+const TIPOS_FALLBACK = [
   { id: 'funcional',   label: 'Funcional',   emoji: '🐛', color: '#0284c7' },
   { id: 'visual',      label: 'Visual',      emoji: '👁️', color: '#8b5cf6' },
   { id: 'rendimiento', label: 'Rendimiento', emoji: '⚡',  color: '#d97706' },
@@ -21,12 +23,14 @@ const PRIORIDADES = [
   { id: 'alta',  label: 'Alta',  color: '#ef4444' },
 ];
 
-const MOCK_TICKETS = [
-  { id: 'SOP-001', titulo: 'Error al solicitar préstamo de libro', tipo: 'Funcional', estado: 'Abierto', prioridad: 'Alta', fecha: '15/05/2026' },
-  { id: 'SOP-002', titulo: 'App se cierra al abrir biblioteca', tipo: 'Rendimiento', estado: 'Pendiente', prioridad: 'Media', fecha: '14/05/2026' },
-  { id: 'SOP-003', titulo: 'Texto del botón se ve cortado', tipo: 'Visual', estado: 'Resuelto', prioridad: 'Baja', fecha: '12/05/2026' },
-  { id: 'SOP-004', titulo: 'No carga mi historial de préstamos', tipo: 'Datos', estado: 'Cerrado', prioridad: 'Media', fecha: '10/05/2026' },
-];
+const ESTADO_MAP = {
+  'New': 'Abierto',
+  'Open': 'Abierto',
+  'Pending': 'Pendiente',
+  'Waiting': 'Pendiente',
+  'Resolved': 'Resuelto',
+  'Closed': 'Cerrado',
+};
 
 const estadoStyle = (estado) => {
   switch (estado) {
@@ -38,9 +42,16 @@ const estadoStyle = (estado) => {
   }
 };
 
+const fmtFecha = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
 const Soporte = ({ navigation }) => {
   const { s, vs, text } = useScale();
   const { theme, isDark } = useTheme();
+  const { perfil } = useUser();
   const t = theme;
 
   const [tab, setTab] = useState('reportar');
@@ -49,29 +60,75 @@ const Soporte = ({ navigation }) => {
   const [desc, setDesc] = useState('');
   const [filterEstado, setFilterEstado] = useState('Todos');
 
-  const handleEnviar = () => {
+  const [tipos, setTipos] = useState(TIPOS_FALLBACK);
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchTickets = useCallback(async () => {
+    setLoadingTickets(true);
+    try {
+      const res = await getMyTickets();
+      const data = res.data || [];
+      setTickets(data.map(tk => ({
+        id: tk.ticket_number || `TK-${tk.id}`,
+        titulo: tk.title,
+        tipo: tk.incident_type_name || tk.module || 'General',
+        estado: ESTADO_MAP[tk.status] || tk.status,
+        prioridad: tk.priority || 'Media',
+        fecha: fmtFecha(tk.created_at),
+        raw: tk,
+      })));
+    } catch (err) {
+      console.error('Error cargando tickets:', err);
+    } finally {
+      setLoadingTickets(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'mis_reportes') {
+      fetchTickets();
+    }
+  }, [tab, fetchTickets]);
+
+  const handleEnviar = async () => {
     if (!tipoSel) {
-      Alert.alert('Selecciona tipo', 'Elige qué tipo de error reportar.');
+      Alert.alert('Selecciona tipo', 'Elige que tipo de error reportar.');
       return;
     }
     if (!desc.trim()) {
-      Alert.alert('Describe el error', 'Cuéntanos qué pasó para poder ayudarte.');
+      Alert.alert('Describe el error', 'Cuentanos que paso para poder ayudarte.');
       return;
     }
-    Alert.alert(
-      'Reporte enviado',
-      'Hemos recibido tu reporte. Te notificaremos cuando haya actualizaciones.',
-      [{ text: 'OK', onPress: () => { setTipoSel(null); setPrioSel(null); setDesc(''); } }]
-    );
+    setSubmitting(true);
+    try {
+      await createTicket({
+        title: desc.slice(0, 80),
+        description: desc,
+        incident_type_id: tipoSel,
+        priority: prioSel || 'media',
+        module: 'movil',
+      });
+      Alert.alert(
+        'Reporte enviado',
+        'Hemos recibido tu reporte. Te notificaremos cuando haya actualizaciones.',
+        [{ text: 'OK', onPress: () => { setTipoSel(null); setPrioSel(null); setDesc(''); } }]
+      );
+    } catch (err) {
+      Alert.alert('Error', err.message || 'No se pudo enviar el reporte.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filteredTickets = filterEstado === 'Todos'
-    ? MOCK_TICKETS
-    : MOCK_TICKETS.filter(tk => tk.estado === filterEstado);
+    ? tickets
+    : tickets.filter(tk => tk.estado === filterEstado);
 
   const stats = {
-    activos: MOCK_TICKETS.filter(tk => tk.estado === 'Abierto' || tk.estado === 'Pendiente').length,
-    resueltos: MOCK_TICKETS.filter(tk => tk.estado === 'Resuelto').length,
+    activos: tickets.filter(tk => tk.estado === 'Abierto' || tk.estado === 'Pendiente').length,
+    resueltos: tickets.filter(tk => tk.estado === 'Resuelto').length,
   };
 
   return (
@@ -80,7 +137,6 @@ const Soporte = ({ navigation }) => {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={[styles.content, { paddingHorizontal: s(20) }]}>
 
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Text style={[styles.pageTitle, { color: t.textPrimary, fontSize: text(24) }]}>Soporte</Text>
@@ -88,7 +144,6 @@ const Soporte = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Segmented control */}
           <View style={[styles.segmented, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
             {['reportar', 'mis_reportes'].map(s => (
               <TouchableOpacity
@@ -106,10 +161,9 @@ const Soporte = ({ navigation }) => {
 
           {tab === 'reportar' ? (
             <>
-              {/* Tipo de error */}
               <Text style={[styles.fieldLabel, { color: t.textSecondary, fontSize: text(13) }]}>Tipo de error</Text>
               <View style={styles.tipoGrid}>
-                {TIPOS.map(tp => (
+                {tipos.map(tp => (
                   <TouchableOpacity
                     key={tp.id}
                     style={[
@@ -129,7 +183,6 @@ const Soporte = ({ navigation }) => {
                 ))}
               </View>
 
-              {/* Prioridad */}
               <Text style={[styles.fieldLabel, { color: t.textSecondary, fontSize: text(13) }]}>Prioridad</Text>
               <View style={styles.prioRow}>
                 {PRIORIDADES.map(p => (
@@ -150,11 +203,10 @@ const Soporte = ({ navigation }) => {
                 ))}
               </View>
 
-              {/* Descripción */}
-              <Text style={[styles.fieldLabel, { color: t.textSecondary, fontSize: text(13) }]}>Descripción</Text>
+              <Text style={[styles.fieldLabel, { color: t.textSecondary, fontSize: text(13) }]}>Descripcion</Text>
               <TextInput
                 style={[styles.textarea, { backgroundColor: t.bgInput || t.bgCardAlt, borderColor: t.border, color: t.textPrimary, fontSize: text(13) }]}
-                placeholder="Cuéntanos qué pasó, qué esperabas que pasara y cómo podemos reproducirlo..."
+                placeholder="Cuentanos que paso, que esperabas que pasara y como podemos reproducirlo..."
                 placeholderTextColor={t.textMuted}
                 multiline
                 numberOfLines={5}
@@ -164,104 +216,114 @@ const Soporte = ({ navigation }) => {
               />
               <View style={styles.charRow}>
                 <Text style={[styles.charHint, { color: desc.length > 100 ? '#22c55e' : t.textMuted, fontSize: text(10) }]}>
-                  {desc.length > 100 ? '● Buena descripción' : 'Describe con detalles'}
+                  {desc.length > 100 ? 'Buena descripcion' : 'Describe con detalles'}
                 </Text>
                 <Text style={[styles.charCount, { color: t.textMuted, fontSize: text(10) }]}>{desc.length} / 2000</Text>
               </View>
 
-              {/* Enviar */}
               <TouchableOpacity
-                style={[styles.sendBtn, { backgroundColor: t.btnPrimary }]}
+                style={[styles.sendBtn, { backgroundColor: t.btnPrimary }, submitting && { opacity: 0.6 }]}
                 onPress={handleEnviar}
+                disabled={submitting}
                 activeOpacity={0.85}
               >
-                <Text style={{ fontSize: 16, marginRight: 8 }}>📤</Text>
-                <Text style={[styles.sendBtnText, { color: t.btnPrimaryText, fontSize: text(15) }]}>Enviar reporte</Text>
+                {submitting ? (
+                  <ActivityIndicator color={t.btnPrimaryText} size="small" />
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 16, marginRight: 8 }}>📤</Text>
+                    <Text style={[styles.sendBtnText, { color: t.btnPrimaryText, fontSize: text(15) }]}>Enviar reporte</Text>
+                  </>
+                )}
               </TouchableOpacity>
 
-              {/* Info card */}
               <View style={[styles.infoCard, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
                 <Text style={{ fontSize: 16, marginRight: 10 }}>⚡</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.infoTitle, { color: t.textPrimary, fontSize: text(12) }]}>Se creará un ticket nuevo</Text>
+                  <Text style={[styles.infoTitle, { color: t.textPrimary, fontSize: text(12) }]}>Se creara un ticket nuevo</Text>
                   <Text style={[styles.infoDesc, { color: t.textMuted, fontSize: text(11) }]}>
-                    Recibirás notificaciones cuando un agente lo tome o solicite más información.
+                    Recibiras notificaciones cuando un agente lo tome o solicite mas informacion.
                   </Text>
                 </View>
               </View>
             </>
           ) : (
             <>
-              {/* Stats */}
-              <View style={styles.statsRow}>
-                <View style={[styles.statCard, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
-                  <Text style={[styles.statValue, { color: t.textPrimary, fontSize: text(20) }]}>{stats.activos}</Text>
-                  <Text style={[styles.statLabel, { color: t.textMuted, fontSize: text(10) }]}>activos</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
-                  <Text style={[styles.statValue, { color: '#22c55e', fontSize: text(20) }]}>{stats.resueltos}</Text>
-                  <Text style={[styles.statLabel, { color: t.textMuted, fontSize: text(10) }]}>resueltos</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
-                  <Text style={[styles.statValue, { color: t.textPrimary, fontSize: text(20) }]}>2h</Text>
-                  <Text style={[styles.statLabel, { color: t.textMuted, fontSize: text(10) }]}>resp. media</Text>
-                </View>
-              </View>
-
-              {/* Filter chips */}
-              <View style={styles.chipRow}>
-                {['Todos', 'Abierto', 'Pendiente', 'Resuelto', 'Cerrado'].map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[
-                      styles.chip,
-                      { borderColor: t.border },
-                      filterEstado === c && { backgroundColor: t.accent, borderColor: t.accent },
-                    ]}
-                    onPress={() => setFilterEstado(c)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.chipText, { color: filterEstado === c ? '#fff' : t.textSecondary, fontSize: text(11) }]}>
-                      {c}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Ticket list */}
-              {filteredTickets.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={{ fontSize: 40, marginBottom: 10, opacity: 0.6 }}>📭</Text>
-                  <Text style={[styles.emptyText, { color: t.textMuted, fontSize: text(13) }]}>No hay reportes</Text>
+              {loadingTickets ? (
+                <View style={styles.loadingCenter}>
+                  <ActivityIndicator size="large" color={t.accent} />
+                  <Text style={[styles.loadingText, { color: t.textMuted }]}>Cargando reportes...</Text>
                 </View>
               ) : (
-                <View style={styles.ticketList}>
-                  {filteredTickets.map(tk => {
-                    const es = estadoStyle(tk.estado);
-                    return (
-                      <View key={tk.id} style={[styles.ticketCard, { backgroundColor: t.bgCard, borderColor: t.border }]}>
-                        <View style={styles.ticketTop}>
-                          <Text style={[styles.ticketId, { color: t.textMuted, fontSize: text(10) }]}>{tk.id}</Text>
-                          <View style={[styles.ticketBadge, { backgroundColor: es.bg }]}>
-                            <Text style={[styles.ticketBadgeText, { color: es.color, fontSize: text(9) }]}>{tk.estado}</Text>
-                          </View>
-                        </View>
-                        <Text style={[styles.ticketTitle, { color: t.textPrimary, fontSize: text(13) }]} numberOfLines={2}>
-                          {tk.titulo}
+                <>
+                  <View style={styles.statsRow}>
+                    <View style={[styles.statCard, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
+                      <Text style={[styles.statValue, { color: t.textPrimary, fontSize: text(20) }]}>{stats.activos}</Text>
+                      <Text style={[styles.statLabel, { color: t.textMuted, fontSize: text(10) }]}>activos</Text>
+                    </View>
+                    <View style={[styles.statCard, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
+                      <Text style={[styles.statValue, { color: '#22c55e', fontSize: text(20) }]}>{stats.resueltos}</Text>
+                      <Text style={[styles.statLabel, { color: t.textMuted, fontSize: text(10) }]}>resueltos</Text>
+                    </View>
+                    <View style={[styles.statCard, { backgroundColor: t.bgCardAlt, borderColor: t.border }]}>
+                      <Text style={[styles.statValue, { color: t.textPrimary, fontSize: text(20) }]}>{tickets.length}</Text>
+                      <Text style={[styles.statLabel, { color: t.textMuted, fontSize: text(10) }]}>total</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.chipRow}>
+                    {['Todos', 'Abierto', 'Pendiente', 'Resuelto', 'Cerrado'].map(c => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[
+                          styles.chip,
+                          { borderColor: t.border },
+                          filterEstado === c && { backgroundColor: t.accent, borderColor: t.accent },
+                        ]}
+                        onPress={() => setFilterEstado(c)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.chipText, { color: filterEstado === c ? '#fff' : t.textSecondary, fontSize: text(11) }]}>
+                          {c}
                         </Text>
-                        <View style={styles.ticketBottom}>
-                          <Text style={[styles.ticketMeta, { color: t.textMuted, fontSize: text(10) }]}>{tk.tipo}</Text>
-                          <Text style={[styles.ticketMeta, { color: t.textMuted, fontSize: text(10) }]}>{tk.fecha}</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {filteredTickets.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Text style={{ fontSize: 40, marginBottom: 10, opacity: 0.6 }}>📭</Text>
+                      <Text style={[styles.emptyText, { color: t.textMuted, fontSize: text(13) }]}>No hay reportes</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.ticketList}>
+                      {filteredTickets.map(tk => {
+                        const es = estadoStyle(tk.estado);
+                        return (
+                          <View key={tk.id} style={[styles.ticketCard, { backgroundColor: t.bgCard, borderColor: t.border }]}>
+                            <View style={styles.ticketTop}>
+                              <Text style={[styles.ticketId, { color: t.textMuted, fontSize: text(10) }]}>{tk.id}</Text>
+                              <View style={[styles.ticketBadge, { backgroundColor: es.bg }]}>
+                                <Text style={[styles.ticketBadgeText, { color: es.color, fontSize: text(9) }]}>{tk.estado}</Text>
+                              </View>
+                            </View>
+                            <Text style={[styles.ticketTitle, { color: t.textPrimary, fontSize: text(13) }]} numberOfLines={2}>
+                              {tk.titulo}
+                            </Text>
+                            <View style={styles.ticketBottom}>
+                              <Text style={[styles.ticketMeta, { color: t.textMuted, fontSize: text(10) }]}>{tk.tipo}</Text>
+                              <Text style={[styles.ticketMeta, { color: t.textMuted, fontSize: text(10) }]}>{tk.fecha}</Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </>
               )}
             </>
           )}
 
-          {/* Back */}
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: t.btnPrimary, marginTop: tab === 'reportar' ? 0 : 16 }]}
             onPress={() => navigation.navigate('Cuenta')}
@@ -314,6 +376,9 @@ const styles = StyleSheet.create({
   infoCard: { flexDirection: 'row', borderRadius: 14, padding: 14, borderWidth: 1, alignItems: 'center', marginBottom: 28 },
   infoTitle: { fontWeight: '700', marginBottom: 2 },
   infoDesc: { lineHeight: 16 },
+
+  loadingCenter: { padding: 40, alignItems: 'center' },
+  loadingText: { marginTop: 12, fontSize: 13 },
 
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statCard: { flex: 1, borderRadius: 14, padding: 14, borderWidth: 1, alignItems: 'center' },

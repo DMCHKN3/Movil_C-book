@@ -14,7 +14,6 @@ import Biblioteca from '../screens/Biblioteca';
 import Prestamos from '../screens/Prestamos';
 import Soporte from '../screens/Soporte';
 import RecuperarContra from '../screens/RecuperarContra';
-import CambiarContra from '../screens/CambiarContra';
 
 const Stack = createNativeStackNavigator();
 
@@ -61,7 +60,6 @@ const AppNavigator = () => {
         <Stack.Screen name="Prestamos" component={Prestamos} />
         <Stack.Screen name="Soporte" component={Soporte} />
         <Stack.Screen name="RecuperarContra" component={RecuperarContra} />
-        <Stack.Screen name="CambiarContra" component={CambiarContra} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSession } from '../api/authApi';
 
 const UserContext = createContext();
 
@@ -16,19 +17,42 @@ export const UserProvider = ({ children }) => {
   const [perfil, setPerfil] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verificar sesión guardada al iniciar
+  const checkSession = useCallback(async () => {
+    try {
+      const data = await getSession();
+      if (data.autenticado && data.user) {
+        setUser(data.user);
+        setPerfil(data.user);
+        await AsyncStorage.setItem('userSession', JSON.stringify({
+          user: data.user,
+          perfil: data.user,
+        }));
+      } else {
+        setUser(null);
+        setPerfil(null);
+        await AsyncStorage.removeItem('userSession');
+      }
+    } catch (err) {
+      console.error('Error verificando sesion:', err);
+      setUser(null);
+      setPerfil(null);
+      await AsyncStorage.removeItem('userSession');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const loadSavedSession = async () => {
       try {
         const savedSession = await AsyncStorage.getItem('userSession');
         if (savedSession) {
           const sessionData = JSON.parse(savedSession);
-          // Sesión permanente hasta que el usuario decida cerrarla
           setUser(sessionData.user);
           setPerfil(sessionData.perfil);
         }
       } catch (error) {
-        console.error('Error cargando sesión guardada:', error);
+        console.error('Error cargando sesion guardada:', error);
       } finally {
         setIsLoading(false);
       }
@@ -40,6 +64,10 @@ export const UserProvider = ({ children }) => {
   const login = (userData, perfilData) => {
     setUser(userData);
     setPerfil(perfilData);
+    AsyncStorage.setItem('userSession', JSON.stringify({
+      user: userData,
+      perfil: perfilData,
+    })).catch(e => console.error('Error guardando sesion:', e));
   };
 
   const logout = async () => {
@@ -48,7 +76,7 @@ export const UserProvider = ({ children }) => {
     try {
       await AsyncStorage.removeItem('userSession');
     } catch (error) {
-      console.error('Error eliminando sesión guardada:', error);
+      console.error('Error eliminando sesion guardada:', error);
     }
   };
 
@@ -67,7 +95,8 @@ export const UserProvider = ({ children }) => {
     logout,
     isAuthenticated,
     getUserBoleta,
-    isLoading
+    isLoading,
+    checkSession,
   };
 
   return (

@@ -6,7 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
-import { iniciarSesionConBoleta, reenviarConfirmacion } from '../../BD/supabaseAuthService';
+import { login as apiLogin } from '../api/authApi';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import SlideToUnlock from 'react-native-slide-to-unlock';
@@ -42,46 +42,28 @@ const IniciarSesion = ({ navigation }) => {
     }
     setIsLoading(true);
     try {
-      const resultado = await iniciarSesionConBoleta(boleta, contra);
-      if (resultado.ok) {
-        login(resultado.user, resultado.perfil);
+      const resultado = await apiLogin(boleta, contra);
+      if (resultado.success) {
+        const { user } = resultado;
+        login(user, user);
         if (mantenerSesion) {
           await AsyncStorage.setItem('userSession', JSON.stringify({
-            user: resultado.user,
-            perfil: resultado.perfil,
-            session: resultado.session,
+            user,
+            perfil: user,
             timestamp: Date.now(),
           }));
         }
-        Alert.alert('Éxito', 'Sesión iniciada correctamente', [{
+        Alert.alert('Exito', 'Sesion iniciada correctamente', [{
           text: 'OK',
           onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },
         }]);
-      } else {
-        if (resultado.needsEmailConfirmation) {
-          Alert.alert('Correo no confirmado', resultado.message, [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Reenviar correo', onPress: () => handleReenviarCorreo(resultado.correo) },
-          ]);
-        } else {
-          Alert.alert('Error', resultado.message || 'Error al iniciar sesión');
-        }
       }
-    } catch {
-      Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleReenviarCorreo = async (email) => {
-    if (!email) { Alert.alert('Error', 'No hay correo disponible'); return; }
-    setIsLoading(true);
-    try {
-      const res = await reenviarConfirmacion(email);
-      Alert.alert(res.ok ? 'Éxito' : 'Error', res.message || (res.ok ? 'Correo reenviado' : 'Error al reenviar'));
-    } catch {
-      Alert.alert('Error', 'Ocurrió un error al reenviar el correo');
+    } catch (err) {
+      if (err.status === 401) {
+        Alert.alert('Error', 'Boleta o contrasena incorrectos');
+      } else {
+        Alert.alert('Error', err.message || 'Ocurrio un error inesperado. Intenta nuevamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -215,8 +197,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, marginBottom: 14,
   },
   logoEmoji: { fontSize: 30 },
-  appName: { fontSize: 26, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
-  appTagline: { fontSize: 13, marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
+  appName: { fontSize: 26, fontWeight: '700', letterSpacing: 0.5 },
+  appTagline: { fontSize: 13, marginTop: 4 },
   card: {
     borderRadius: 20, padding: 28,
     borderWidth: 1,

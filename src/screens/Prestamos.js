@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator, StatusBar, Alert, Modal,
 } from 'react-native';
 import useScale from '../hooks/useScale';
-import { getSolicitudesCompletas, cancelarSolicitud } from '../../tablas/solicitudesAcciones';
+import { getMyRequests, cancelRequest } from '../api/solicitudesApi';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
-import { getDatos } from '../../tablas/cuenta';
 
 function getEstado(id) {
   const e = Number(id);
@@ -20,20 +19,6 @@ function getEstado(id) {
     case 5: label = 'Entregado';  color = '#22c55e'; break;
     case 6: label = 'Devuelto';   color = '#c46f21'; break;
     default: label = `Estado ${e}`; color = '#6b7280';
-  }
-  return { label, color, bg: color + '22' };
-}
-
-function getEstadoPrestamo(prestamo) {
-  if (!prestamo || !prestamo.estado) return null;
-  const e = prestamo.estado;
-  let label, color;
-  switch (e) {
-    case 'en_espera': label = 'En espera';  color = '#8b5cf6'; break;
-    case 'recogido':  label = 'Recogido';   color = '#22c55e'; break;
-    case 'devuelto':  label = 'Devuelto';   color = '#c46f21'; break;
-    case 'perdido':   label = 'Perdido';    color = '#ef4444'; break;
-    default: label = e; color = '#6b7280';
   }
   return { label, color, bg: color + '22' };
 }
@@ -53,19 +38,8 @@ function fmtFecha(iso) {
   });
 }
 
-function estaVencido(s) {
-  const estado = Number(s.estado_asistencia_id);
-  if (estado === 2 && s.fecha_limite_recoleccion) {
-    return new Date(s.fecha_limite_recoleccion) < new Date();
-  }
-  if (estado === 5 && s.fecha_limite_devolucion && !s.fecha_devolucion_real) {
-    return new Date(s.fecha_limite_devolucion) < new Date();
-  }
-  return false;
-}
-
 const Prestamos = ({ navigation }) => {
-  const { getUserBoleta, isAuthenticated } = useUser();
+  const { getUserBoleta, isAuthenticated, perfil } = useUser();
   const { theme, isDark } = useTheme();
   const { s, vs, text } = useScale();
   const boleta = getUserBoleta();
@@ -77,45 +51,49 @@ const Prestamos = ({ navigation }) => {
   const [cancelModal, setCancelModal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
   const PER_PAGE = 5;
 
   const fetchPrestamos = useCallback(async () => {
     if (!isAuthenticated() || !boleta) { setLoading(false); return; }
     try {
       setLoading(true);
-      const [data, datos] = await Promise.all([
-        getSolicitudesCompletas(boleta),
-        getDatos(boleta),
-      ]);
-      setItems(data);
-      setTieneDocumentos(datos?.[0]?.tiene_documentos ?? false);
+      const res = await getMyRequests();
+      setItems(res.data || []);
+      setTieneDocumentos(perfil?.tiene_documentos ?? false);
     } catch (err) {
-      console.error('Error cargando préstamos:', err);
+      console.error('Error cargando prestamos:', err);
     } finally {
       setLoading(false);
     }
-  }, [boleta, isAuthenticated]);
+  }, [boleta, isAuthenticated, perfil]);
 
   useEffect(() => { fetchPrestamos(); }, [fetchPrestamos]);
-  useEffect(() => { setPage(1); }, [search, filterEstado]);
 
-  const filteredItems = items.filter(s => {
-    const q = search.toLowerCase();
-    const matchSearch = q
-      ? (s.titulo || '').toLowerCase().includes(q) || String(s.id).includes(q)
-      : true;
-    const matchEstado = filterEstado
-      ? String(estadoEfectivo(s)) === filterEstado
-      : true;
-    return matchSearch && matchEstado;
-  });
+  const handleCancel = async () => {
+    if (!cancelModal || submitting) return;
+    setSubmitting(true);
+    try {
+      const resultado = await cancelRequest('libro', cancelModal.id);
+      if (resultado.success) {
+        setItems(prev => prev.map(s =>
+          s.id === cancelModal.id
+            ? { ...s, estado_asistencia_id: 4 }
+            : s
+        ));
+        setPage(1);
+        Alert.alert('Exito', resultado.message);
+      }
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Error al cancelar la solicitud');
+    } finally {
+      setSubmitting(false);
+      setCancelModal(null);
+    }
+  };
 
   const pendientes = items.filter(s => Number(s.estado_asistencia_id) === 1);
-  const vencidas = items.filter(s => estaVencido(s));
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PER_PAGE));
-  const paged = filteredItems.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  const paged = items.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   if (loading) {
     return (
@@ -161,54 +139,10 @@ const Prestamos = ({ navigation }) => {
             </View>
           )}
 
-          {vencidas.length > 0 && (
-            <View style={[styles.infoBanner, { backgroundColor: '#ef444418', borderColor: '#ef444444' }]}>
-              <Text style={[styles.infoBannerText, { color: '#ef4444' }]}>
-                ⚠️ Tienes {vencidas.length} solicitud{vencidas.length !== 1 ? 'es' : ''} vencida{vencidas.length !== 1 ? 's' : ''}
-              </Text>
-            </View>
-          )}
-
-          <View style={[styles.searchInputWrap, { backgroundColor: t.bgInput, borderColor: t.border }]}>
-            <Text style={styles.searchIcon}>🔍</Text>
-            <TextInput
-              style={[styles.searchInput, { color: t.textPrimary, fontSize: text(13) }]}
-              placeholder="Buscar por título o ID..."
-              placeholderTextColor={t.textMuted}
-              value={search}
-              onChangeText={setSearch}
-            />
-          </View>
-
-          <View style={styles.filterChips}>
-            <Text style={[styles.filterLabel, { color: t.textMuted, fontSize: text(10) }]}>ESTADO</Text>
-            <View style={styles.chipRow}>
-              {[
-                { key: '', label: 'Todos' },
-                { key: '1', label: 'Pendiente' },
-                { key: '2', label: 'Aprobada' },
-                { key: '3', label: 'Rechazada' },
-                { key: '4', label: 'Cancelada' },
-                { key: '5', label: 'Entregado' },
-                { key: '6', label: 'Devuelto' },
-              ].map(opt => (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.chip, filterEstado === opt.key && styles.chipActive, { backgroundColor: filterEstado === opt.key ? t.accent : t.bgCardAlt, borderColor: t.border }]}
-                  onPress={() => setFilterEstado(opt.key)}
-                >
-                  <Text style={[styles.chipText, { color: filterEstado === opt.key ? '#fff' : t.textSecondary, fontSize: text(11) }]}>{opt.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {filteredItems.length === 0 ? (
+          {items.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={{ fontSize: 40, marginBottom: 10, opacity: 0.6 }}>📭</Text>
-              <Text style={[styles.emptyText, { color: t.textMuted }]}>
-                {search || filterEstado ? 'No hay solicitudes con esos filtros' : 'No tienes solicitudes de libros'}
-              </Text>
+              <Text style={[styles.emptyText, { color: t.textMuted }]}>No tienes solicitudes de libros</Text>
             </View>
           ) : (
             <>
@@ -216,33 +150,18 @@ const Prestamos = ({ navigation }) => {
                 {paged.map((s) => {
                   const estadoNum = estadoEfectivo(s);
                   const est = getEstado(estadoNum);
-                  const ep = getEstadoPrestamo(s.prestamo);
                   return (
-                    <View key={s.id} style={[styles.card, { backgroundColor: t.bgCard, borderColor: estaVencido(s) ? '#ef4444' : t.border }]}>
+                    <View key={s.id} style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.border }]}>
                       <View style={styles.cardTop}>
                         <View style={styles.cardTopLeft}>
                           <Text style={[styles.cardTitle, { color: t.textPrimary, fontSize: text(14) }]} numberOfLines={1}>
                             {s.titulo || `Libro #${s.ejemplar_id}`}
                           </Text>
                         </View>
-                        <View style={styles.cardBadgeColumn}>
-                          <View style={[styles.cardBadge, { backgroundColor: est.bg }]}>
-                            <Text style={[styles.cardBadgeText, { color: est.color, fontSize: text(9) }]}>
-                              {est.label}
-                            </Text>
-                          </View>
-                          {estaVencido(s) && (
-                            <Text style={[styles.overdueText, { color: '#ef4444', fontSize: text(9) }]}>
-                              ⚠ Vencido
-                            </Text>
-                          )}
-                          {ep && (
-                            <View style={[styles.cardBadge, { backgroundColor: ep.bg }]}>
-                              <Text style={[styles.cardBadgeText, { color: ep.color, fontSize: text(8) }]}>
-                                📖 {ep.label}
-                              </Text>
-                            </View>
-                          )}
+                        <View style={[styles.cardBadge, { backgroundColor: est.bg }]}>
+                          <Text style={[styles.cardBadgeText, { color: est.color, fontSize: text(9) }]}>
+                            {est.label}
+                          </Text>
                         </View>
                       </View>
 
@@ -306,7 +225,7 @@ const Prestamos = ({ navigation }) => {
                 })}
               </View>
 
-              {filteredItems.length > PER_PAGE && (
+              {items.length > PER_PAGE && (
                 <View style={styles.pagination}>
                   <TouchableOpacity
                     style={[styles.pageBtn, { backgroundColor: t.bgCardAlt, borderColor: t.border }, page <= 1 && styles.pageBtnDisabled]}
@@ -395,7 +314,7 @@ const styles = StyleSheet.create({
   headerSection: { alignItems: 'center', marginBottom: 24 },
   headerIcon: { width: 68, height: 68, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { fontWeight: '700', letterSpacing: 0.4 },
-  subtitle: { fontSize: 13, marginTop: 6, textAlign: 'center' },
+  subtitle: { fontSize: 13, marginTop: 6 },
   divider: { height: 3, width: 44, borderRadius: 2, marginTop: 14 },
 
   infoBanner: { borderRadius: 12, padding: 12, borderWidth: 1, marginBottom: 16 },
@@ -404,27 +323,14 @@ const styles = StyleSheet.create({
   emptyState: { padding: 40, alignItems: 'center' },
   emptyText: { fontSize: 14, fontWeight: '500', textAlign: 'center' },
 
-  searchInputWrap: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, marginBottom: 12 },
-  searchIcon: { fontSize: 14, marginRight: 8 },
-  searchInput: { flex: 1, height: 44 },
-
-  filterChips: { marginBottom: 16 },
-  filterLabel: { fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6, marginLeft: 2 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  chipActive: { borderColor: 'transparent' },
-  chipText: { fontWeight: '600' },
-
   list: { gap: 14, marginBottom: 20 },
 
   card: { borderRadius: 16, padding: 16, borderWidth: 1 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardTopLeft: { flex: 1, marginRight: 10 },
   cardTitle: { fontWeight: '700' },
-  cardBadgeColumn: { alignItems: 'flex-end', gap: 4 },
   cardBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   cardBadgeText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
-  overdueText: { fontWeight: '700' },
   cardAutor: { marginTop: 4, fontStyle: 'italic' },
   cardDivider: { height: 1, marginVertical: 12 },
 

@@ -4,7 +4,7 @@ import {
   Alert, ActivityIndicator, ScrollView, StatusBar,
 } from 'react-native';
 import useScale from '../hooks/useScale';
-import { crearCuentaConAuth, reenviarConfirmacion } from '../../BD/supabaseAuthService';
+import { register as apiRegister } from '../api/authApi';
 import { useTheme } from '../context/ThemeContext';
 
 const CrearCuenta = ({ navigation }) => {
@@ -16,47 +16,24 @@ const CrearCuenta = ({ navigation }) => {
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [correo, setCorreo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [correoParaReenvio, setCorreoParaReenvio] = useState('');
 
   const handleCrearCuenta = async () => {
     if (isLoading) return;
     setIsLoading(true);
     try {
-      const resultado = await crearCuentaConAuth(user, correo, contra, repcontra);
-
-      if (!resultado.ok) {
-        Alert.alert('Error', resultado.message || 'Error al crear la cuenta.');
-        return;
+      const resultado = await apiRegister(user, correo, contra, repcontra);
+      if (resultado.success) {
+        Alert.alert(
+          'Cuenta creada',
+          'Se envio un correo de verificacion a tu direccion.\n\n' +
+          '1. Revisa tu bandeja de entrada\n' +
+          '2. Haz clic en el enlace de verificacion\n' +
+          '3. Regresa aqui e inicia sesion',
+          [{ text: 'OK', onPress: () => { setUser(''); setContra(''); setRepContra(''); setCorreo(''); navigation.navigate('IniciarAcc'); } }]
+        );
       }
-
-      setCorreoParaReenvio(correo);
-      Alert.alert(
-        'Cuenta creada',
-        'Se envió un correo de verificación a tu dirección.\n\n' +
-        '1. Revisa tu bandeja de entrada\n' +
-        '2. Haz clic en el enlace de verificación\n' +
-        '3. Regresa aquí e inicia sesión',
-        [
-          { text: 'OK', onPress: () => { setUser(''); setContra(''); setRepContra(''); setCorreo(''); navigation.navigate('IniciarAcc'); } },
-          { text: '¿No recibiste el correo?', onPress: () => handleReenviarCorreo(correo), style: 'cancel' },
-        ]
-      );
-    } catch {
-      Alert.alert('Error', 'Ocurrió un error inesperado. Intenta nuevamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleReenviarCorreo = async (email) => {
-    const addr = email || correoParaReenvio;
-    if (!addr) { Alert.alert('Error', 'No hay correo disponible para reenviar'); return; }
-    setIsLoading(true);
-    try {
-      const res = await reenviarConfirmacion(addr);
-      Alert.alert(res.ok ? 'Éxito' : 'Error', res.message || (res.ok ? 'Correo reenviado' : 'Error al reenviar'));
-    } catch {
-      Alert.alert('Error', 'Ocurrió un error al reenviar el correo');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Ocurrio un error inesperado. Intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -152,8 +129,8 @@ const styles = StyleSheet.create({
   brandSection: { alignItems: 'center', marginBottom: 28 },
   logoBox: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 12 },
   logoEmoji: { fontSize: 28 },
-  appName: { fontSize: 24, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
-  appTagline: { fontSize: 13, marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
+  appName: { fontSize: 24, fontWeight: '700', letterSpacing: 0.5 },
+  appTagline: { fontSize: 13, marginTop: 4 },
   card: {
     borderRadius: 20, padding: 28, borderWidth: 1,
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 },

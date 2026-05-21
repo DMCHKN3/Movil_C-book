@@ -4,7 +4,7 @@ import {
   Alert, ActivityIndicator, ScrollView, StatusBar, Keyboard,
 } from 'react-native';
 import useScale from '../hooks/useScale';
-import { solicitarRecuperacionContrasena } from '../../BD/supabaseAuthService';
+import { forgotPassword } from '../api/authApi';
 import { useTheme } from '../context/ThemeContext';
 
 const RecuperarContra = ({ navigation }) => {
@@ -20,11 +20,9 @@ const RecuperarContra = ({ navigation }) => {
     if (isLoading) return;
     setIsLoading(true);
     try {
-      const resultado = await solicitarRecuperacionContrasena(boleta);
-      if (resultado.ok) {
+      const resultado = await forgotPassword(boleta);
+      if (resultado.success) {
         setSent(true);
-      } else {
-        Alert.alert('Error', resultado.message);
       }
     } catch {
       Alert.alert('Error', 'Ocurrió un error inesperado');

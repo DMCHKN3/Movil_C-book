@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { iniciarSesion } from '../../BD/supabaseAuthService';
+import { iniciarSesionConBoleta } from '../../BD/supabaseAuthService';
 
 export const validarLogin = (user, contra, setLoggedIn) => {
     const resUser = /^[0-9]{10}$/;
@@ -33,7 +33,7 @@ export const validarLoginConBD = async (user, contra) => {
 
     try {
         // Intentar iniciar sesión con la base de datos
-        const resultado = await iniciarSesion(user, contra);
+        const resultado = await iniciarSesionConBoleta(user, contra);
         
         if (resultado.ok) {
             return { ok: true, user: resultado.user, perfil: resultado.perfil };

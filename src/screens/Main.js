@@ -9,9 +9,8 @@ import useScale from '../hooks/useScale';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 
-import { getSolicitudesAprobadas } from '../../tablas/actvs_rec';
-import { getUsuario, getDatos } from '../../tablas/cuenta';
-import { cerrarSesionConAuth } from '../../BD/supabaseAuthService';
+import { getMyRequests } from '../api/solicitudesApi';
+import { logout as apiLogout } from '../api/authApi';
 
 const { width } = Dimensions.get('window');
 
@@ -62,15 +61,10 @@ const Main = ({ navigation }) => {
             text: 'Cerrar sesión',
                 onPress: async () => {
               try {
-                const resultado = await cerrarSesionConAuth();
-                if (resultado.ok) {
-                  await logout();
-                  navigation.navigate('IniciarAcc');
-                  console.log('Sesión cerrada exitosamente');
-                  Alert.alert('Sesión Cerrada', 'Has cerrado sesión exitosamente.');
-                } else {
-                  Alert.alert('Error', resultado.message || 'No se pudo cerrar sesión. Intenta de nuevo.');
-                }
+                const resultado = await apiLogout();
+                await logout();
+                navigation.navigate('IniciarAcc');
+                Alert.alert('Sesion Cerrada', 'Has cerrado sesion exitosamente.');
               } catch (error) {
                 console.error('Error en   logout:', error);
                 Alert.alert('Error', 'Ocurrió un error al cerrar sesión.');
@@ -88,18 +82,12 @@ const Main = ({ navigation }) => {
   const fetchData = async () => {
     if (!isAuthenticated() || !registro_id) return;
     try {
-      const [solicitudesData, usuarioData, datosData] = await Promise.all([
-        getSolicitudesAprobadas(registro_id),
-        getUsuario(registro_id),
-        getDatos(registro_id),
-      ]);
-      setAprobadas(solicitudesData);
-      if (usuarioData?.length > 0) {
-        const u = usuarioData[0];
-        const nombre = [u.nombre, u.apellido].filter(Boolean).join(' ') || u.nombre || '';
-        setNombreAlumno(nombre);
-      }
-      setTieneDocumentos(datosData?.[0]?.tiene_documentos ?? false);
+      const res = await getMyRequests();
+      const solicitudes = res.data || [];
+      const aprobadas = solicitudes.filter(s => Number(s.estado_asistencia_id) === 2).slice(0, 10);
+      setAprobadas(aprobadas);
+      setNombreAlumno(perfil?.nombre || '');
+      setTieneDocumentos(perfil?.tiene_documentos ?? false);
     } catch (err) {
       console.error('Error cargando datos:', err);
     }
