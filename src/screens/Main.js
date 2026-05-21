@@ -55,19 +55,17 @@ const Main = ({ navigation }) => {
   useFocusEffect(
     React.useCallback(() => {
       const onBack = () => {
-        Alert.alert('Cerrar sesión', '¿Deseas cerrar sesión?', [
+        Alert.alert('Cerrar sesion', 'Deseas cerrar sesion?', [
           { text: 'Cancelar', style: 'cancel' },
           {
-            text: 'Cerrar sesión',
-                onPress: async () => {
+            text: 'Cerrar sesion',
+            onPress: async () => {
+              await logout();
+              navigation.reset({ index: 0, routes: [{ name: 'IniciarAcc' }] });
               try {
-                const resultado = await apiLogout();
-                await logout();
-                navigation.navigate('IniciarAcc');
-                Alert.alert('Sesion Cerrada', 'Has cerrado sesion exitosamente.');
+                await apiLogout();
               } catch (error) {
-                console.error('Error en   logout:', error);
-                Alert.alert('Error', 'Ocurrió un error al cerrar sesión.');
+                console.error('Error en logout API:', error);
               }
             },
           },
@@ -203,6 +201,7 @@ const Main = ({ navigation }) => {
               { label: 'Biblioteca', icon: '📚', screen: 'Biblioteca' },
               { label: 'Préstamos', icon: '📝', screen: 'Prestamos' },
               { label: 'Mi Cuenta', icon: '👤', screen: 'Cuenta' },
+              { label: 'Soporte', icon: '💬', screen: 'Soporte' },
             ].map((item) => (
               <TouchableOpacity
                 key={item.screen}
@@ -231,7 +230,7 @@ const styles = StyleSheet.create({
   loaderCard: { borderRadius: 20, padding: 40, alignItems: 'center', borderWidth: 1 },
   loaderText: { marginTop: 14, fontSize: 15, fontWeight: '500' },
 
-  content: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 40 },
+  content: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 100 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   headerLeft: { flex: 1 },

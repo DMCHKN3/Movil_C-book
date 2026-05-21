@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   loaderCard: { borderRadius: 20, padding: 40, alignItems: 'center', borderWidth: 1 },
   loaderText: { marginTop: 14, fontSize: 15, fontWeight: '500' },
 
-  content: { paddingTop: 54, paddingBottom: 40 },
+  content: { paddingTop: 54, paddingBottom: 100 },
 
   headerSection: { alignItems: 'center', marginBottom: 24 },
   headerIcon: { width: 68, height: 68, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },

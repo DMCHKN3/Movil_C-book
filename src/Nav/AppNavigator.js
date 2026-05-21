@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
+import SupportFAB from '../components/SupportFAB';
 
 import IniciarSesion from '../screens/IniciarAcc';
 import CrearCuenta from '../screens/CrearAcc';
@@ -34,9 +35,22 @@ const NotificationHandler = () => {
   return null;
 };
 
+const AUTH_ROUTES = ['Main', 'Cuenta', 'Biblioteca', 'Prestamos'];
+
+function getCurrentRouteName(state) {
+  if (!state) return null;
+  const route = state.routes[state.index];
+  if (route.state) {
+    return getCurrentRouteName(route.state);
+  }
+  return route.name;
+}
+
 const AppNavigator = () => {
   const { isAuthenticated, isLoading } = useUser();
   const { theme } = useTheme();
+  const navRef = useRef(null);
+  const [currentRoute, setCurrentRoute] = useState(null);
 
   if (isLoading) {
     return (
@@ -47,9 +61,16 @@ const AppNavigator = () => {
   }
 
   const initialRouteName = isAuthenticated() ? 'Main' : 'IniciarAcc';
+  const showFAB = AUTH_ROUTES.includes(currentRoute);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navRef}
+      onStateChange={(state) => {
+        const name = getCurrentRouteName(state);
+        setCurrentRoute(name);
+      }}
+    >
       <NotificationHandler />
       <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="IniciarAcc" component={IniciarSesion} />
@@ -61,6 +82,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Soporte" component={Soporte} />
         <Stack.Screen name="RecuperarContra" component={RecuperarContra} />
       </Stack.Navigator>
+      {showFAB && <SupportFAB />}
     </NavigationContainer>
   );
 };
