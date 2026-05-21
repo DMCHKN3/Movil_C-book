@@ -22,7 +22,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.cbook.app"
+      "package": "com.cbook.app",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
