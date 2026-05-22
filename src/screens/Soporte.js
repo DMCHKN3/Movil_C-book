@@ -84,6 +84,7 @@ const Soporte = ({ navigation }) => {
   const [filterEstado, setFilterEstado] = useState('Todos');
 
   const [tipos, setTipos] = useState(TIPOS_FALLBACK);
+  const [loadingTipos, setLoadingTipos] = useState(true);
   const [tickets, setTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -111,11 +112,16 @@ const Soporte = ({ navigation }) => {
 
   useEffect(() => {
     let alive = true;
+    setLoadingTipos(true);
     getTicketTypes()
       .then(({ tipos: data }) => {
-        if (!alive || !Array.isArray(data) || data.length === 0) return;
+        if (!alive) return;
+        if (!Array.isArray(data) || data.length === 0) {
+          setLoadingTipos(false);
+          return;
+        }
         const mapped = data
-          .filter((tp) => tp.is_active !== false)
+          .filter((tp) => tp.is_active !== false && /[A-Za-z]{3,}/.test(String(tp.name)))
           .map((tp) => {
             const { emoji, color } = getEmojiAndColor(tp.name);
             return {
@@ -126,10 +132,15 @@ const Soporte = ({ navigation }) => {
               color,
             };
           });
-        setTipos(mapped);
-        if (mapped[0]?.id) setTipoSel(mapped[0].id);
+        if (mapped.length > 0) {
+          setTipos(mapped);
+          if (mapped[0]?.id) setTipoSel(mapped[0].id);
+        }
+        setLoadingTipos(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (alive) setLoadingTipos(false);
+      });
     return () => { alive = false; };
   }, []);
 
@@ -142,6 +153,8 @@ const Soporte = ({ navigation }) => {
   const handleEnviar = async () => {
     if (submitting) return;
 
+    const tipoNombre = tipos.find(t => t.id === tipoSel)?.label || tipoSel;
+
     const onSuccess = () => {
       setTipoSel(tipos[0]?.id || 'funcional');
       setPrioSel('media');
@@ -149,7 +162,7 @@ const Soporte = ({ navigation }) => {
       setDesc('');
     };
 
-    await enviarSoporte(tipoSel, titulo, desc, prioSel, onSuccess);
+    await enviarSoporte(tipoNombre, titulo, desc, prioSel, onSuccess);
   };
 
   const filteredTickets = filterEstado === 'Todos'
@@ -197,6 +210,11 @@ const Soporte = ({ navigation }) => {
           {tab === 'reportar' ? (
             <>
               <Text style={[styles.fieldLabel, { color: t.textPrimary, fontSize: text(13) }]}>Tipo de error</Text>
+              {loadingTipos ? (
+                <View style={styles.loadingGrid}>
+                  <ActivityIndicator size="large" color={t.accent} />
+                </View>
+              ) : (
               <View style={styles.tipoGrid}>
                 {tipos.map(tp => (
                   <TouchableOpacity
@@ -220,6 +238,7 @@ const Soporte = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
+              )}
 
               <Text style={[styles.fieldLabel, { color: t.textPrimary, fontSize: text(13) }]}>Prioridad sugerida</Text>
               <View style={styles.prioRow}>
@@ -457,6 +476,7 @@ const styles = StyleSheet.create({
 
   loadingCenter: { padding: 40, alignItems: 'center' },
   loadingText: { marginTop: 12, fontSize: 13 },
+  loadingGrid: { height: 180, justifyContent: 'center', alignItems: 'center' },
 
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statCard: { flex: 1, borderRadius: 14, padding: 14, borderWidth: 1, alignItems: 'center' },
