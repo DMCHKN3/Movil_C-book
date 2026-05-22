@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   Alert, StatusBar, ActivityIndicator,
@@ -7,6 +7,7 @@ import useScale from '../hooks/useScale';
 import { useTheme } from '../context/ThemeContext';
 import { getTicketTypes, createTicket, getMyTickets } from '../api/supportApi';
 import { useUser } from '../context/UserContext';
+import { validarSoporte, enviarSoporte } from '../validaciones/validacionSoporte';
 
 const TIPOS_FALLBACK = [
   { id: 'funcional',   label: 'Funcional',   desc: 'Algo no funciona como deberia',   emoji: '🐛', color: '#0284c7' },
@@ -16,6 +17,27 @@ const TIPOS_FALLBACK = [
   { id: 'acceso',      label: 'Acceso',      desc: 'No puedo entrar o sin permisos',  emoji: '🔒',  color: '#dc4c3f' },
   { id: 'otro',        label: 'Otro',        desc: 'No encaja con lo anterior',       emoji: '⋯',   color: '#64748b' },
 ];
+
+const KEYWORD_MAP = [
+  { keywords: ['acceso', 'sesion', 'login', 'permiso'],    emoji: '🔒', color: '#dc4c3f' },
+  { keywords: ['inventario', 'libro', 'ejemplar', 'catalogo'], emoji: '📚', color: '#0284c7' },
+  { keywords: ['prestamo', 'devolucion', 'renovacion'],    emoji: '📝', color: '#d97706' },
+  { keywords: ['tecnico', 'general', 'otro'],              emoji: '🐛', color: '#8b5cf6' },
+  { keywords: ['funcional', 'funciona'],                   emoji: '🐛', color: '#0284c7' },
+  { keywords: ['visual', 'diseno', 'interfaz'],            emoji: '👁️', color: '#8b5cf6' },
+  { keywords: ['rendimiento', 'lento', 'carga'],           emoji: '⚡',  color: '#d97706' },
+  { keywords: ['datos', 'informacion'],                    emoji: '#️⃣',  color: '#1f9d74' },
+];
+
+function getEmojiAndColor(name) {
+  const lower = name.toLowerCase();
+  for (const mapping of KEYWORD_MAP) {
+    if (mapping.keywords.some(kw => lower.includes(kw))) {
+      return { emoji: mapping.emoji, color: mapping.color };
+    }
+  }
+  return { emoji: '⋯', color: '#64748b' };
+}
 
 const PRIORIDADES = [
   { id: 'baja',  label: 'Baja',  desc: 'Puedo seguir trabajando',            color: '#1f9d74' },
@@ -95,13 +117,13 @@ const Soporte = ({ navigation }) => {
         const mapped = data
           .filter((tp) => tp.is_active !== false)
           .map((tp) => {
-            const fallback = TIPOS_FALLBACK.find(f => tp.name.toLowerCase().includes(f.id));
+            const { emoji, color } = getEmojiAndColor(tp.name);
             return {
               id: tp.id,
               label: tp.name,
               desc: tp.description || 'Sin descripcion',
-              emoji: fallback?.emoji || '⋯',
-              color: fallback?.color || '#64748b',
+              emoji,
+              color,
             };
           });
         setTipos(mapped);
@@ -117,31 +139,17 @@ const Soporte = ({ navigation }) => {
     }
   }, [tab, fetchTickets]);
 
-  const canSubmit = useMemo(() => {
-    return desc.trim().length >= 15 && titulo.trim().length >= 4;
-  }, [desc, titulo]);
-
   const handleEnviar = async () => {
-    if (!canSubmit || submitting) return;
-    setSubmitting(true);
-    try {
-      await createTicket({
-        title: titulo.trim(),
-        description: desc.trim(),
-        incident_type_id: tipoSel,
-        priority: prioSel,
-        module: 'movil',
-      });
-      Alert.alert(
-        'Reporte enviado',
-        'Se creo tu ticket. Te notificaremos cuando haya actualizaciones.',
-        [{ text: 'OK', onPress: () => { setTipoSel('funcional'); setPrioSel('media'); setTitulo(''); setDesc(''); } }]
-      );
-    } catch (err) {
-      Alert.alert('Error', err.message || 'No se pudo enviar el reporte.');
-    } finally {
-      setSubmitting(false);
-    }
+    if (submitting) return;
+
+    const onSuccess = () => {
+      setTipoSel(tipos[0]?.id || 'funcional');
+      setPrioSel('media');
+      setTitulo('');
+      setDesc('');
+    };
+
+    await enviarSoporte(tipoSel, titulo, desc, prioSel, onSuccess);
   };
 
   const filteredTickets = filterEstado === 'Todos'
@@ -243,6 +251,12 @@ const Soporte = ({ navigation }) => {
                 onChangeText={setTitulo}
                 maxLength={160}
               />
+              <View style={styles.charRow}>
+                <Text style={[styles.charHint, { color: titulo.trim().length >= 4 ? '#22c55e' : t.textMuted, fontSize: text(10) }]}>
+                  {titulo.trim().length >= 4 ? 'Asunto valido' : 'Minimo 4 caracteres'}
+                </Text>
+                <Text style={[styles.charCount, { color: t.textMuted, fontSize: text(10) }]}>{titulo.length} / 160</Text>
+              </View>
 
               <Text style={[styles.fieldLabel, { color: t.textPrimary, fontSize: text(13) }]}>Descripcion</Text>
               <TextInput
@@ -257,16 +271,16 @@ const Soporte = ({ navigation }) => {
                 maxLength={2000}
               />
               <View style={styles.charRow}>
-                <Text style={[styles.charHint, { color: desc.length >= 15 ? '#22c55e' : t.textMuted, fontSize: text(10) }]}>
-                  {desc.length >= 15 ? 'Descripcion suficiente' : 'Minimo 15 caracteres'}
+                <Text style={[styles.charHint, { color: desc.trim().length >= 15 ? '#22c55e' : t.textMuted, fontSize: text(10) }]}>
+                  {desc.trim().length >= 15 ? 'Descripcion suficiente' : 'Minimo 15 caracteres'}
                 </Text>
                 <Text style={[styles.charCount, { color: t.textMuted, fontSize: text(10) }]}>{desc.length} / 2000</Text>
               </View>
 
               <TouchableOpacity
-                style={[styles.sendBtn, { backgroundColor: canSubmit && !submitting ? t.accent : t.btnPrimary }, (!canSubmit || submitting) && { opacity: 0.5 }]}
+                style={[styles.sendBtn, { backgroundColor: t.accent }, submitting && { opacity: 0.5 }]}
                 onPress={handleEnviar}
-                disabled={!canSubmit || submitting}
+                disabled={submitting}
                 activeOpacity={0.85}
               >
                 {submitting ? (
@@ -394,7 +408,7 @@ const Soporte = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { paddingTop: 54, paddingBottom: 40 },
+  content: { paddingTop: 54, paddingBottom: 100 },
 
   header: { marginBottom: 20 },
   headerLeft: { flex: 1 },
