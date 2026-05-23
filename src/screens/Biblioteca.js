@@ -170,17 +170,18 @@ const Biblioteca = ({ navigation }) => {
                     key={i}
                     style={[styles.topCard, { backgroundColor: t.bgCard, borderColor: t.borderStrong }]}
                     onPress={() => {
-                      setSearch(b.titulo);
+                      const t = b.libros?.titulo || '';
+                      setSearch(t);
                       setFilterTipo('');
                       setFilterDisp('');
                     }}
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.topCardTitle, { color: t.textPrimary, fontSize: text(12) }]} numberOfLines={2}>
-                      {b.titulo}
+                      {b.libros?.titulo || 'Sin título'}
                     </Text>
                     <Text style={[styles.topCardAutor, { color: t.textMuted, fontSize: text(10) }]} numberOfLines={1}>
-                      {b.autor}
+                      {b.libros?.autor || ''}
                     </Text>
                     <Text style={[styles.topCardCount, { color: t.accentBright, fontSize: text(11) }]}>
                       {b.solicitudes_count} solicitudes
