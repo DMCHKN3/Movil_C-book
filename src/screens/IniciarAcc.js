@@ -3,7 +3,6 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ActivityIndicator, BackHandler, ScrollView, StatusBar, Keyboard,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
 import { login as apiLogin } from '../api/authApi';
@@ -45,14 +44,7 @@ const IniciarSesion = ({ navigation }) => {
       const resultado = await apiLogin(boleta, contra);
       if (resultado.success) {
         const { user } = resultado;
-        login(user, user);
-        if (mantenerSesion) {
-          await AsyncStorage.setItem('userSession', JSON.stringify({
-            user,
-            perfil: user,
-            timestamp: Date.now(),
-          }));
-        }
+        login(user, user, mantenerSesion);
         Alert.alert('Exito', 'Sesion iniciada correctamente', [{
           text: 'OK',
           onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },

@@ -6,6 +6,7 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
 import SupportFAB from '../components/SupportFAB';
+import SessionCaptcha from '../components/SessionCaptcha';
 
 import IniciarSesion from '../screens/IniciarAcc';
 import CrearCuenta from '../screens/CrearAcc';
@@ -72,6 +73,7 @@ const AppNavigator = () => {
       }}
     >
       <NotificationHandler />
+      <SessionCaptcha />
       <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="IniciarAcc" component={IniciarSesion} />
         <Stack.Screen name="CrearAcc" component={CrearCuenta} />
