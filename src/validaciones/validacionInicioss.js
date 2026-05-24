@@ -3,7 +3,7 @@ import { iniciarSesionConBoleta } from '../../BD/supabaseAuthService';
 
 export const validarLogin = (user, contra, setLoggedIn) => {
     const resUser = /^[0-9]{10}$/;
-    const resContra = /^[A-Za-z0-9\-_.,"#%]{7,16}$/;
+    const resContra = /^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{7,16}$/;
     
     if (!user || !contra) {
         Alert.alert('Error', 'Por favor complete todos los campos');

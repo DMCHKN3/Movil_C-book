@@ -3,7 +3,7 @@ import { verificarBoletaExiste } from "../../BD/supabaseAuthService";
 
 export const validarform = (user, contra, repcontra, correo) => {
     const resUser = /^[0-9]{10}$/;
-    const resContra = /^[A-Za-z0-9\-_.,"#%]{7,16}$/;
+    const resContra = /^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{7,16}$/;
     const resCorreo = /^[a-zA-Z0-9._%+-]+@alumno.ipn.mx{2,100}$/;
 
     if (!user || !contra || !correo || !repcontra) {
