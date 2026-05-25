@@ -8,6 +8,7 @@ import useScale from '../hooks/useScale';
 import { login as apiLogin } from '../api/authApi';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { validarLogin } from '../validaciones/validacionInicioss';
 import SlideToUnlock from 'react-native-slide-to-unlock';
 
 const IniciarSesion = ({ navigation }) => {
@@ -35,6 +36,7 @@ const IniciarSesion = ({ navigation }) => {
       Alert.alert('Verificación requerida', 'Por favor completa la verificación deslizando el control.');
       return;
     }
+    if (!validarLogin(boleta, contra)) return;
     if (!/^\d{10}$/.test(boleta)) {
       Alert.alert('Error', 'La boleta debe tener 10 dígitos');
       return;
@@ -53,8 +55,10 @@ const IniciarSesion = ({ navigation }) => {
     } catch (err) {
       if (err.status === 401) {
         Alert.alert('Error', 'Boleta o contrasena incorrectos');
+      } else if (err.status) {
+        Alert.alert('Error', err.message);
       } else {
-        Alert.alert('Error', err.message || 'Ocurrio un error inesperado. Intenta nuevamente.');
+        Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
       }
     } finally {
       setIsLoading(false);

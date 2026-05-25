@@ -6,6 +6,7 @@ import {
 import useScale from '../hooks/useScale';
 import { register as apiRegister } from '../api/authApi';
 import { useTheme } from '../context/ThemeContext';
+import { validarform } from '../validaciones/validacionForm';
 
 const CrearCuenta = ({ navigation }) => {
   const { theme, isDark, toggleTheme } = useTheme();
@@ -19,6 +20,7 @@ const CrearCuenta = ({ navigation }) => {
 
   const handleCrearCuenta = async () => {
     if (isLoading) return;
+    if (!validarform(user, contra, repcontra, correo)) return;
     setIsLoading(true);
     try {
       const resultado = await apiRegister(user, correo, contra, repcontra);
@@ -33,7 +35,11 @@ const CrearCuenta = ({ navigation }) => {
         );
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Ocurrio un error inesperado. Intenta nuevamente.');
+      if (err.status) {
+        Alert.alert('Error', err.message);
+      } else {
+        Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
+      }
     } finally {
       setIsLoading(false);
     }

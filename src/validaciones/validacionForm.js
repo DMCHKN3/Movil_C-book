@@ -1,5 +1,4 @@
 import { Alert } from "react-native";
-import { verificarBoletaExiste } from "../../BD/supabaseAuthService";
 
 export const validarform = (user, contra, repcontra, correo) => {
     const resUser = /^[0-9]{10}$/;
@@ -20,6 +19,29 @@ export const validarform = (user, contra, repcontra, correo) => {
         Alert.alert('Error', 'El correo debe de tener un formato válido (ejemplo@alumno.ipn.mx)');
         return false;
     }
+
+    if (contra.length < 7 || contra.length > 16) {
+        Alert.alert('Error', 'La contraseña debe tener entre 7 y 16 caracteres');
+        return false;
+    }
+
+    if (!resContra.test(contra)) {
+        Alert.alert('Error', 'La contraseña debe incluir al menos una mayúscula, una minúscula y un carácter especial');
+        return false;
+    }
+
+    if (contra !== repcontra) {
+        Alert.alert('Error', 'Favor de introducir la misma contraseña');
+        return false;
+    }
+
+    return true;
+}
+
+    if (!resCorreo.test(correo)) {
+        Alert.alert('Error', 'El correo debe de tener un formato válido (ejemplo@alumno.ipn.mx)');
+        return false;
+    }
     
     if (contra.length < 7 || contra.length > 16) {
         Alert.alert('Error', 'La contraseña debe tener entre 7 y 16 caracteres');
@@ -35,7 +57,7 @@ export const validarform = (user, contra, repcontra, correo) => {
     }
 
     return true;
-}
+
 
 // Nueva función asíncrona para validar incluyendo la verificación de boleta
 export const validarformConBD = async (user, contra, repcontra, nombre, apellidos, correo) => {
