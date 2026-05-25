@@ -22,7 +22,7 @@ const statusColor = (estado) => {
     case 4: return '#ef4444';
     case 5: return '#22c55e';
     case 6: return '#c46f21';
-    default: return '#6b7280';
+    default: return '#f59e0b';
   }
 };
 
@@ -34,7 +34,7 @@ const statusLabel = (estado) => {
     case 4: return 'Cancelada';
     case 5: return 'Entregado';
     case 6: return 'Devuelto';
-    default: return 'Desconocido';
+    default: return 'En espera de recoleccion';
   }
 };
 
