@@ -122,7 +122,7 @@ const Soporte = ({ navigation }) => {
           return;
         }
         const mapped = data
-          .filter((tp) => tp.is_active !== false && /[A-Za-z]{3,}/.test(String(tp.name)))
+          .filter((tp) => tp.is_active !== false && /[A-Za-z]{3,160}/.test(String(tp.name)))
           .map((tp) => {
             const { emoji, color } = getEmojiAndColor(tp.name);
             return {

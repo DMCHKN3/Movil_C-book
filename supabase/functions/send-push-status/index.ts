@@ -99,13 +99,36 @@ async function handleWebhook(record, old_record) {
     },
   }))
 
-  const expoResult = await fetch('https://exp.host/--/api/v2/push/send', {
+  const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(messages),
-  }).then(r => r.json())
+  })
+  const expoResult = await expoRes.json()
+  const expoData = Array.isArray(expoResult) ? expoResult : expoResult?.data || []
 
-  return new Response(JSON.stringify({ sent: messages.length, expoResult }), {
+  const deleteHeaders = {
+    'apikey': SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+  }
+
+  let sentCount = 0
+  for (let i = 0; i < expoData.length; i++) {
+    if (expoData[i].status === 'error') {
+      const errMsg = expoData[i].message || ''
+      if (errMsg.includes('DeviceNotRegistered') || errMsg.includes('InvalidToken')) {
+        const token = messages[i].to
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/push_tokens?token=eq.${encodeURIComponent(token)}`,
+          { method: 'DELETE', headers: deleteHeaders }
+        )
+      }
+    } else {
+      sentCount++
+    }
+  }
+
+  return new Response(JSON.stringify({ sent: sentCount, total: messages.length, removed: messages.length - sentCount }), {
     headers: { 'Content-Type': 'application/json' },
   })
 }

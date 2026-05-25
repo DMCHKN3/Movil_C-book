@@ -3,8 +3,11 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { savePushToken, removePushToken } from '../services/notificationService';
 import { useUser } from './UserContext';
+
+const PUSH_TOKEN_KEY = 'expo_push_token';
 
 const NotificationContext = createContext();
 
@@ -75,11 +78,19 @@ export const NotificationProvider = ({ children }) => {
         tokenRef.current = tokenData.data;
 
         if (isMounted) {
+          const storedToken = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+
+          if (tokenData.data === storedToken) {
+            setPushStatus('registered');
+            return;
+          }
+
           const boleta = getUserBoleta();
           if (boleta) {
             setPushStatus('registering');
             const result = await savePushToken(tokenData.data, boleta);
             if (result?.ok) {
+              await AsyncStorage.setItem(PUSH_TOKEN_KEY, tokenData.data);
               setPushStatus('registered');
             } else {
               setPushStatus('error');
@@ -98,6 +109,7 @@ export const NotificationProvider = ({ children }) => {
       registerForPushNotifications();
     } else {
       setPushStatus('not_logged_in');
+      AsyncStorage.removeItem(PUSH_TOKEN_KEY).catch(() => {});
       if (tokenRef.current) {
         removePushToken(tokenRef.current);
         tokenRef.current = null;

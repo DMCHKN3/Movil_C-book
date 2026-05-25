@@ -5,6 +5,11 @@ export const validarSoporte = (tipoSel, titulo, desc) => {
     const resTitulo = /^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñüÜ\s.,;:!?¿¡\-_()]{4,160}$/;
     const resDesc = /^[\s\S]{15,2000}$/;
 
+    if (!titulo && !desc) {
+        Alert.alert('Error', 'Todos los campos son obligatorios');
+        return false;
+    }
+
     if (!tipoSel) {
         Alert.alert('Error', 'Selecciona un tipo de error');
         return false;
