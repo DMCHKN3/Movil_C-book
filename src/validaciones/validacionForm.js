@@ -26,7 +26,7 @@ export const validarform = (user, contra, repcontra, correo) => {
     }
 
     if (!resContra.test(contra)) {
-        Alert.alert('Error', 'La contraseña debe incluir al menos una mayúscula, una minúscula y un carácter especial');
+        Alert.alert('Error', 'La contraseña debe incluir al menos una mayúscula, una minúscula y un carácter especial (! @ # $ % ^ & * ( ) _ + - = [ ] { } ; \' : " \\ | , . < > / ?)');
         return false;
     }
 
