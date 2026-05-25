@@ -18,14 +18,26 @@ const RecuperarContra = ({ navigation }) => {
   const handleSubmit = async () => {
     Keyboard.dismiss();
     if (isLoading) return;
+    if (!boleta) {
+      Alert.alert('Error', 'Ingresa tu número de boleta');
+      return;
+    }
+    if (!/^\d{10}$/.test(boleta)) {
+      Alert.alert('Error', 'La boleta debe tener 10 dígitos');
+      return;
+    }
     setIsLoading(true);
     try {
       const resultado = await forgotPassword(boleta);
       if (resultado.success) {
         setSent(true);
       }
-    } catch {
-      Alert.alert('Error', 'Ocurrió un error inesperado');
+    } catch (err) {
+      if (err.status) {
+        Alert.alert('Error', err.message);
+      } else {
+        Alert.alert('Error', 'Ocurrió un error inesperado');
+      }
     } finally {
       setIsLoading(false);
     }

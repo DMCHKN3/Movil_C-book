@@ -76,10 +76,8 @@ const IniciarSesion = ({ navigation }) => {
           }
         }
       } catch (_) {}
-      if (err.status === 401) {
+      if (err.status) {
         Alert.alert('Error', 'Boleta o contrasena incorrectos');
-      } else if (err.status) {
-        Alert.alert('Error', err.message);
       } else {
         Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
       }
