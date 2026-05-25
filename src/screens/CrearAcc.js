@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ActivityIndicator, ScrollView, StatusBar,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useScale from '../hooks/useScale';
 import { register as apiRegister } from '../api/authApi';
 import { useTheme } from '../context/ThemeContext';
@@ -25,6 +26,7 @@ const CrearCuenta = ({ navigation }) => {
     try {
       const resultado = await apiRegister(user, correo, contra, repcontra);
       if (resultado.success) {
+        await AsyncStorage.setItem('@pending_verification', JSON.stringify({ boleta: user, correo }));
         Alert.alert(
           'Cuenta creada',
           'Se envio un correo de verificacion a tu direccion.\n\n' +

@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import useScale from '../hooks/useScale';
-import { login as apiLogin } from '../api/authApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { login as apiLogin, verifyEmail } from '../api/authApi';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { validarLogin } from '../validaciones/validacionInicioss';
@@ -53,6 +54,28 @@ const IniciarSesion = ({ navigation }) => {
         }]);
       }
     } catch (err) {
+      try {
+        const pendingRaw = await AsyncStorage.getItem('@pending_verification');
+        if (pendingRaw) {
+          const pending = JSON.parse(pendingRaw);
+          if (String(pending.boleta) === String(boleta)) {
+            const verif = await verifyEmail(pending.boleta, pending.correo);
+            if (verif.confirmado) {
+              await AsyncStorage.removeItem('@pending_verification');
+              const resultado = await apiLogin(boleta, contra);
+              if (resultado.success) {
+                const { user } = resultado;
+                login(user, user, mantenerSesion);
+                Alert.alert('Exito', 'Sesion iniciada correctamente', [{
+                  text: 'OK',
+                  onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },
+                }]);
+                return;
+              }
+            }
+          }
+        }
+      } catch (_) {}
       if (err.status === 401) {
         Alert.alert('Error', 'Boleta o contrasena incorrectos');
       } else if (err.status) {
