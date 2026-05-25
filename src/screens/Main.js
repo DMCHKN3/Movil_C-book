@@ -44,7 +44,7 @@ const Main = ({ navigation }) => {
   const { theme, isDark, toggleTheme } = useTheme();
 
   const [loading, setLoading] = useState(true);
-  const [aprobadas, setAprobadas] = useState([]);
+  const [activas, setActivas] = useState([]);
   const [tieneDocumentos, setTieneDocumentos] = useState(null);
   const [nombreAlumno, setNombreAlumno] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -82,8 +82,11 @@ const Main = ({ navigation }) => {
     try {
       const res = await getMyRequests();
       const solicitudes = res.data || [];
-      const aprobadas = solicitudes.filter(s => Number(s.estado_asistencia_id) === 2).slice(0, 10);
-      setAprobadas(aprobadas);
+      const activas = solicitudes
+        .filter(s => ![3, 4, 6].includes(Number(s.estado_asistencia_id)))
+        .sort((a, b) => new Date(b.fecha_solicitud) - new Date(a.fecha_solicitud))
+        .slice(0, 3);
+      setActivas(activas);
       setNombreAlumno(perfil?.nombre || '');
       setTieneDocumentos(perfil?.tiene_documentos ?? false);
     } catch (err) {
@@ -155,23 +158,23 @@ const Main = ({ navigation }) => {
             </Text>
           </View>
 
-          {/* Solicitudes Aprobadas */}
+          {/* Solicitudes Activas */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={[styles.sectionIconBox, { backgroundColor: t.accentBg, borderColor: t.borderStrong }]}>
-                <Text style={styles.sectionEmoji}>✅</Text>
+                <Text style={styles.sectionEmoji}>📖</Text>
               </View>
-              <Text style={[styles.sectionTitle, { color: t.textPrimary, fontSize: text(15) }]}>Solicitudes Aprobadas</Text>
+              <Text style={[styles.sectionTitle, { color: t.textPrimary, fontSize: text(15) }]}>Solicitudes Recientes</Text>
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRow}>
-              {aprobadas.length === 0 ? (
+              {activas.length === 0 ? (
                 <View style={[styles.actCard, styles.emptyCard, { width: cardWidth, backgroundColor: t.bgCard, borderColor: t.border }]}>
                   <Text style={styles.emptyEmoji}>📭</Text>
-                  <Text style={[styles.emptyText, { color: t.textMuted, fontSize: text(13) }]}>Sin solicitudes aprobadas</Text>
+                  <Text style={[styles.emptyText, { color: t.textMuted, fontSize: text(13) }]}>Sin solicitudes activas</Text>
                 </View>
               ) : (
-                aprobadas.slice(0, 5).map((act, i) => {
+                activas.map((act, i) => {
                   const color = statusColor(act.estado);
                   return (
                     <View key={i} style={[styles.actCard, { width: cardWidth, backgroundColor: t.bgCard, borderColor: t.border }]}>
