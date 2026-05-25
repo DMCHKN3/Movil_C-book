@@ -8,6 +8,7 @@ import useScale from '../hooks/useScale';
 import { register as apiRegister } from '../api/authApi';
 import { useTheme } from '../context/ThemeContext';
 import { validarform } from '../validaciones/validacionForm';
+import { trackEvent } from '../services/analyticsService';
 
 const CrearCuenta = ({ navigation }) => {
   const { theme, isDark, toggleTheme } = useTheme();
@@ -26,6 +27,7 @@ const CrearCuenta = ({ navigation }) => {
     try {
       const resultado = await apiRegister(user, correo, contra, repcontra);
       if (resultado.success) {
+        trackEvent('register_completed');
         await AsyncStorage.setItem('@pending_verification', JSON.stringify({ boleta: user, correo }));
         Alert.alert(
           'Cuenta creada',

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { getSession } from '../api/authApi';
+import { setUserId, setUserProps, trackEvent } from '../services/analyticsService';
 
 const UserContext = createContext();
 const SESSION_KEY = 'userSession';
@@ -120,6 +121,8 @@ export const UserProvider = ({ children }) => {
     setUser(userData);
     setPerfil(perfilData);
     setNeedsCaptcha(false);
+    setUserId(userData.boleta);
+    setUserProps({ role: 'student' });
 
     if (persist) {
       AsyncStorage.setItem(SESSION_KEY, JSON.stringify({
@@ -146,6 +149,7 @@ export const UserProvider = ({ children }) => {
 
   const resolveCaptcha = useCallback(async () => {
     setNeedsCaptcha(false);
+    trackEvent('captcha_completed');
     const newExpiresAt = Date.now() + SESSION_DURATION;
     try {
       const saved = await AsyncStorage.getItem(SESSION_KEY);

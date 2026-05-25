@@ -4,6 +4,7 @@ import useScale from '../hooks/useScale';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { logout as apiLogout } from '../api/authApi';
+import { trackEvent } from '../services/analyticsService';
 
 const Cuenta = ({ navigation }) => {
   const { logout, perfil } = useUser();
@@ -18,6 +19,7 @@ const Cuenta = ({ navigation }) => {
         text: 'Cerrar Sesion', style: 'destructive',
         onPress: async () => {
           await logout();
+          trackEvent('logout');
           navigation.reset({ index: 0, routes: [{ name: 'IniciarAcc' }] });
           try {
             await apiLogout();

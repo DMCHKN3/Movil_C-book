@@ -36,7 +36,7 @@ const RecuperarContra = ({ navigation }) => {
       if (err.status) {
         Alert.alert('Error', err.message);
       } else {
-        Alert.alert('Error', 'Ocurrió un error inesperado');
+        Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
       }
     } finally {
       setIsLoading(false);

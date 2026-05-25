@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getTicketTypes, createTicket, getMyTickets } from '../api/supportApi';
 import { useUser } from '../context/UserContext';
 import { validarSoporte, enviarSoporte } from '../validaciones/validacionSoporte';
+import { trackEvent } from '../services/analyticsService';
 
 const TIPOS_FALLBACK = [
   { id: 'funcional',   label: 'Funcional',   desc: 'Algo no funciona como deberia',   emoji: '🐛', color: '#0284c7' },
@@ -145,6 +146,7 @@ const Soporte = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
+    trackEvent('support_tab_changed', { tab });
     if (tab === 'mis_reportes') {
       fetchTickets();
     }
@@ -156,6 +158,7 @@ const Soporte = ({ navigation }) => {
     const tipoNombre = tipos.find(t => t.id === tipoSel)?.label || tipoSel;
 
     const onSuccess = () => {
+      trackEvent('support_ticket_created', { ticket_type: tipoNombre, priority: prioSel });
       setTipoSel(tipos[0]?.id || 'funcional');
       setPrioSel('media');
       setTitulo('');

@@ -57,7 +57,11 @@ export const enviarSoporte = async (tipoSel, titulo, desc, prioSel, onSuccess) =
         return { ok: true };
     } catch (error) {
         console.error('Error en enviarSoporte:', error);
-        Alert.alert('Error', error.message || 'No se pudo enviar el reporte.');
+        if (error.status) {
+          Alert.alert('Error', error.message);
+        } else {
+          Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
+        }
         return { ok: false };
     }
 };

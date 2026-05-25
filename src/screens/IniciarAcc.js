@@ -10,6 +10,7 @@ import { login as apiLogin, verifyEmail } from '../api/authApi';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { validarLogin } from '../validaciones/validacionInicioss';
+import { trackEvent } from '../services/analyticsService';
 import SlideToUnlock from 'react-native-slide-to-unlock';
 
 const IniciarSesion = ({ navigation }) => {
@@ -48,6 +49,7 @@ const IniciarSesion = ({ navigation }) => {
       if (resultado.success) {
         const { user } = resultado;
         login(user, user, mantenerSesion);
+        trackEvent('login_completed');
         Alert.alert('Exito', 'Sesion iniciada correctamente', [{
           text: 'OK',
           onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },
@@ -66,6 +68,7 @@ const IniciarSesion = ({ navigation }) => {
               if (resultado.success) {
                 const { user } = resultado;
                 login(user, user, mantenerSesion);
+                trackEvent('login_completed');
                 Alert.alert('Exito', 'Sesion iniciada correctamente', [{
                   text: 'OK',
                   onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },

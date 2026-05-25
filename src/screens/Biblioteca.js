@@ -8,6 +8,7 @@ import { getBooks, getMostRequested } from '../api/booksApi';
 import { getMyRequests, createRequest } from '../api/solicitudesApi';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { trackEvent } from '../services/analyticsService';
 
 const MAX_LIBROS = 3;
 
@@ -106,11 +107,19 @@ const Biblioteca = ({ navigation }) => {
           b.id === confirmItem.id ? { ...b, Disponible: false } : b
         ));
         setActivasCount(prev => prev + 1);
+        trackEvent('book_requested', {
+          book_id: confirmItem.id,
+          book_title: confirmItem.libros?.titulo,
+        });
         setConfirmItem(null);
         Alert.alert('Exito', resultado.message);
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Error al crear la solicitud');
+      if (err.status) {
+        Alert.alert('Error', err.message);
+      } else {
+        Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
+      }
       setConfirmItem(null);
     } finally {
       setSubmitting(false);

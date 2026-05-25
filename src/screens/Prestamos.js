@@ -84,7 +84,11 @@ const Prestamos = ({ navigation }) => {
         Alert.alert('Exito', resultado.message);
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Error al cancelar la solicitud');
+      if (err.status) {
+        Alert.alert('Error', err.message);
+      } else {
+        Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
+      }
     } finally {
       setSubmitting(false);
       setCancelModal(null);

@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
 import SupportFAB from '../components/SupportFAB';
 import SessionCaptcha from '../components/SessionCaptcha';
+import { trackScreen } from '../services/analyticsService';
 
 import IniciarSesion from '../screens/IniciarAcc';
 import CrearCuenta from '../screens/CrearAcc';
@@ -70,6 +71,7 @@ const AppNavigator = () => {
       onStateChange={(state) => {
         const name = getCurrentRouteName(state);
         setCurrentRoute(name);
+        if (name) trackScreen(name);
       }}
     >
       <NotificationHandler />
