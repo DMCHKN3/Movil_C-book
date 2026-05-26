@@ -26,13 +26,30 @@ const CrearCuenta = ({ navigation }) => {
   const handleCrearCuenta = async () => {
     if (isLoading) return;
     if (!validarform(user, contra, repcontra, correo)) return;
+    setPendingRegister({ boleta: user, correo, contra, repcontra });
+    setShowTerms(true);
+  };
+
+  const doRegister = async () => {
     setIsLoading(true);
     try {
-      const resultado = await apiRegister(user, correo, contra, repcontra);
+      const resultado = await apiRegister(pendingRegister.boleta, pendingRegister.correo, pendingRegister.contra, pendingRegister.repcontra);
       if (resultado.success) {
         trackEvent('register_completed');
-        setPendingRegister({ boleta: user, correo });
-        setShowTerms(true);
+        const termsKey = `terms_accepted_${pendingRegister.boleta}`;
+        await AsyncStorage.setItem(termsKey, 'true');
+        await AsyncStorage.setItem('@pending_verification', JSON.stringify({ boleta: pendingRegister.boleta, correo: pendingRegister.correo }));
+        setShowTerms(false);
+        setPendingRegister(null);
+        setIsLoading(false);
+        Alert.alert(
+          'Cuenta creada',
+          'Se envio un correo de verificacion a tu direccion.\n\n' +
+          '1. Revisa tu bandeja de entrada\n' +
+          '2. Haz clic en el enlace de verificacion\n' +
+          '3. Regresa aqui e inicia sesion',
+          [{ text: 'OK', onPress: () => { setUser(''); setContra(''); setRepContra(''); setCorreo(''); navigation.navigate('IniciarAcc'); } }]
+        );
       }
     } catch (err) {
       if (err.status) {
@@ -40,7 +57,6 @@ const CrearCuenta = ({ navigation }) => {
       } else {
         Alert.alert('Error', 'Ocurrio un error inesperado. Intenta nuevamente.');
       }
-    } finally {
       setIsLoading(false);
     }
   };
@@ -126,23 +142,10 @@ const CrearCuenta = ({ navigation }) => {
 
       <TermsModal
         visible={showTerms}
-        onAccept={async () => {
-          await AsyncStorage.setItem('@pending_verification', JSON.stringify(pendingRegister));
-          setShowTerms(false);
-          setPendingRegister(null);
-          Alert.alert(
-            'Cuenta creada',
-            'Se envio un correo de verificacion a tu direccion.\n\n' +
-            '1. Revisa tu bandeja de entrada\n' +
-            '2. Haz clic en el enlace de verificacion\n' +
-            '3. Regresa aqui e inicia sesion',
-            [{ text: 'OK', onPress: () => { setUser(''); setContra(''); setRepContra(''); setCorreo(''); navigation.navigate('IniciarAcc'); } }]
-          );
-        }}
+        onAccept={doRegister}
         onReject={() => {
           setShowTerms(false);
           setPendingRegister(null);
-          navigation.navigate('IniciarAcc');
         }}
       />
     </View>
