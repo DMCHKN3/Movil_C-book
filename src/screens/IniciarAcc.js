@@ -12,9 +12,10 @@ import { useTheme } from '../context/ThemeContext';
 import { validarLogin } from '../validaciones/validacionInicioss';
 import { trackEvent } from '../services/analyticsService';
 import SlideToUnlock from 'react-native-slide-to-unlock';
+import TermsModal from '../components/TermsModal';
 
 const IniciarSesion = ({ navigation }) => {
-  const { login } = useUser();
+  const { login, logout } = useUser();
   const { theme, isDark, toggleTheme } = useTheme();
   const [boleta, setBoleta] = useState('');
   const [contra, setContra] = useState('');
@@ -22,6 +23,8 @@ const IniciarSesion = ({ navigation }) => {
   const [mantenerSesion, setMantenerSesion] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [captchaVerif, setCaptchaVerif] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
   const { s, vs, text } = useScale();
 
   useFocusEffect(
@@ -50,6 +53,14 @@ const IniciarSesion = ({ navigation }) => {
         const { user } = resultado;
         login(user, user, mantenerSesion);
         trackEvent('login_completed');
+        const termsKey = `terms_accepted_${user.boleta}`;
+        const alreadyAccepted = await AsyncStorage.getItem(termsKey);
+        if (!alreadyAccepted) {
+          setPendingUser(user);
+          setShowTerms(true);
+          setIsLoading(false);
+          return;
+        }
         Alert.alert('Exito', 'Sesion iniciada correctamente', [{
           text: 'OK',
           onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },
@@ -69,6 +80,14 @@ const IniciarSesion = ({ navigation }) => {
                 const { user } = resultado;
                 login(user, user, mantenerSesion);
                 trackEvent('login_completed');
+                const termsKey = `terms_accepted_${user.boleta}`;
+                const alreadyAccepted = await AsyncStorage.getItem(termsKey);
+                if (!alreadyAccepted) {
+                  setPendingUser(user);
+                  setShowTerms(true);
+                  setIsLoading(false);
+                  return;
+                }
                 Alert.alert('Exito', 'Sesion iniciada correctamente', [{
                   text: 'OK',
                   onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },
@@ -201,6 +220,25 @@ const IniciarSesion = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <TermsModal
+        visible={showTerms}
+        onAccept={async () => {
+          const termsKey = `terms_accepted_${pendingUser.boleta}`;
+          await AsyncStorage.setItem(termsKey, 'true');
+          setShowTerms(false);
+          setPendingUser(null);
+          Alert.alert('Exito', 'Sesion iniciada correctamente', [{
+            text: 'OK',
+            onPress: () => { setBoleta(''); setContra(''); navigation.navigate('Main'); },
+          }]);
+        }}
+        onReject={() => {
+          logout();
+          setShowTerms(false);
+          setPendingUser(null);
+        }}
+      />
     </View>
   );
 };
