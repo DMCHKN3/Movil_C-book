@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, StatusBar, Modal, Alert,
@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { trackEvent } from '../services/analyticsService';
 
 const MAX_LIBROS = 3;
+const CHUNK = 21;
 
 const Biblioteca = ({ navigation }) => {
   const { theme, isDark } = useTheme();
@@ -19,6 +20,7 @@ const Biblioteca = ({ navigation }) => {
   const boleta = getUserBoleta();
 
   const [items, setItems] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [masSolicitados, setMasSolicitados] = useState([]);
   const [activasCount, setActivasCount] = useState(0);
   const [tieneDocumentos, setTieneDocumentos] = useState(null);
@@ -30,16 +32,36 @@ const Biblioteca = ({ navigation }) => {
   const [page, setPage] = useState(1);
   const PER_PAGE = 3;
 
+  const mountedRef = useRef(false);
+  const lastServerPageRef = useRef(0);
+
   const [confirmItem, setConfirmItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const t = theme;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (p, s) => {
+    const isSearching = (s || '').trim().length > 0;
+
+    if (!isSearching) {
+      const sp = Math.floor((p - 1) * PER_PAGE / CHUNK) + 1;
+      if (sp === lastServerPageRef.current) return;
+      lastServerPageRef.current = sp;
+    } else {
+      lastServerPageRef.current = 0;
+    }
+
     setLoading(true);
     try {
+      let booksPromise;
+      if (isSearching) {
+        booksPromise = getBooks('libro');
+      } else {
+        booksPromise = getBooks('libro', { limit: CHUNK, page: lastServerPageRef.current });
+      }
+
       const [booksRes, masSolRes, misSolicitudesRes] = await Promise.all([
-        getBooks('libro'),
+        booksPromise,
         getMostRequested(),
         isAuthenticated() ? getMyRequests() : Promise.resolve({ data: [] }),
       ]);
@@ -48,6 +70,7 @@ const Biblioteca = ({ navigation }) => {
       const solicitudes = misSolicitudesRes.data || [];
       const activas = solicitudes.filter(s => Number(s.estado_asistencia_id) === 1).length;
       setItems(ejemplares);
+      setTotalItems(booksRes.total || ejemplares.length);
       setMasSolicitados(masSol);
       setActivasCount(activas);
       setTieneDocumentos(perfil?.tiene_documentos ?? false);
@@ -58,28 +81,49 @@ const Biblioteca = ({ navigation }) => {
     }
   }, [boleta, isAuthenticated, perfil]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load(1, '');
+    mountedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    setPage(1);
+    const isSearching = search.trim().length > 0;
+    if (isSearching && items.length > 0 && items.length === totalItems) return;
+    load(1, search);
+  }, [search]);
+
+  useEffect(() => {
+    if (!mountedRef.current || page === 1) return;
+    if (search.trim().length > 0) return;
+    load(page, search);
+  }, [page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterTipo, filterDisp]);
 
   const tipos = useMemo(() => {
     return [...new Set(items.map(b => b.libros?.tipo_material).filter(Boolean))];
   }, [items]);
 
-  useEffect(() => { setPage(1); }, [search, filterTipo, filterDisp]);
-
   const filtered = useMemo(() => {
+    const isSearching = search.trim().length > 0;
     const q = search.toLowerCase();
+
     return items.filter(b => {
-      const titulo = (b.libros?.titulo || '').toLowerCase();
-      const autor = (b.libros?.autor || '').toLowerCase();
-      const isbn = (b.libros?.isbn || '').toLowerCase();
-      const clasificacion = (b.libros?.clasificacion || '').toLowerCase();
+      if (isSearching) {
+        const titulo = (b.libros?.titulo || '').toLowerCase();
+        const autor = (b.libros?.autor || '').toLowerCase();
+        const isbn = (b.libros?.isbn || '').toLowerCase();
+        const clasificacion = (b.libros?.clasificacion || '').toLowerCase();
+        if (!(titulo.includes(q) || autor.includes(q) || isbn.includes(q) || clasificacion.includes(q)))
+          return false;
+      }
+
       const tipo = b.libros?.tipo_material || '';
       const disponible = b.Disponible;
-
-      if (q && !(
-        titulo.includes(q) || autor.includes(q) ||
-        isbn.includes(q) || clasificacion.includes(q)
-      )) return false;
 
       if (filterTipo && tipo !== filterTipo) return false;
       if (filterDisp === 'si' && !disponible) return false;
@@ -89,8 +133,18 @@ const Biblioteca = ({ navigation }) => {
     });
   }, [items, search, filterTipo, filterDisp]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.max(1, search.trim()
+    ? Math.ceil(filtered.length / PER_PAGE)
+    : Math.ceil(totalItems / PER_PAGE)
+  );
+  const paged = filtered.slice(
+    search.trim()
+      ? (page - 1) * PER_PAGE
+      : ((page - 1) * PER_PAGE) % CHUNK,
+    search.trim()
+      ? page * PER_PAGE
+      : ((page - 1) * PER_PAGE) % CHUNK + PER_PAGE
+  );
 
   const handleSolicitar = async () => {
     if (!confirmItem || submitting) return;

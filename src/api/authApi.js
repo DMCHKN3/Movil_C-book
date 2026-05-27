@@ -4,8 +4,8 @@ export async function login(boleta, password) {
   return api.post('/login', { boleta, password });
 }
 
-export async function register(boleta, correo, password, confPsw) {
-  return api.post('/registro', { boleta, correo, password, confPsw });
+export async function register(boleta, correo, password, confPsw, termsAccepted) {
+  return api.post('/registro', { boleta, correo, password, confPsw, acepta_terminos: termsAccepted });
 }
 
 export async function verifyEmail(boleta, correo) {

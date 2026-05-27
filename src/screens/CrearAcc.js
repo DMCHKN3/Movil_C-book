@@ -31,9 +31,10 @@ const CrearCuenta = ({ navigation }) => {
   };
 
   const doRegister = async () => {
+    setShowTerms(false);
     setIsLoading(true);
     try {
-      const resultado = await apiRegister(pendingRegister.boleta, pendingRegister.correo, pendingRegister.contra, pendingRegister.repcontra);
+      const resultado = await apiRegister(pendingRegister.boleta, pendingRegister.correo, pendingRegister.contra, pendingRegister.repcontra, true);
       if (resultado.success) {
         trackEvent('register_completed');
         const termsKey = `terms_accepted_${pendingRegister.boleta}`;
