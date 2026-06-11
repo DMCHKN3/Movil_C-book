@@ -40,10 +40,14 @@ function getEmojiAndColor(name) {
   return { emoji: '⋯', color: '#64748b' };
 }
 
-const PRIORIDADES = [
-  { id: 'baja',  label: 'Baja',  desc: 'Puedo seguir trabajando',            color: '#1f9d74' },
-  { id: 'media', label: 'Media', desc: 'Afecta una tarea',                   color: '#d97706' },
-  { id: 'alta',  label: 'Alta',  desc: 'Bloquea operacion de la biblioteca', color: '#dc4c3f' },
+const MODULOS = [
+  'Prestamos - Nuevo prestamo',
+  'Catalogo - Busqueda',
+  'Usuarios - Registro',
+  'Reportes - Exportar',
+  'Documentos',
+  'Login / Acceso',
+  'Otro modulo',
 ];
 
 const ESTADO_MAP = {
@@ -79,7 +83,7 @@ const Soporte = ({ navigation }) => {
 
   const [tab, setTab] = useState('reportar');
   const [tipoSel, setTipoSel] = useState('funcional');
-  const [prioSel, setPrioSel] = useState('media');
+  const [modulo, setModulo] = useState(MODULOS[0]);
   const [titulo, setTitulo] = useState('');
   const [desc, setDesc] = useState('');
   const [filterEstado, setFilterEstado] = useState('Todos');
@@ -158,14 +162,14 @@ const Soporte = ({ navigation }) => {
     const tipoNombre = tipos.find(t => t.id === tipoSel)?.label || tipoSel;
 
     const onSuccess = () => {
-      trackEvent('support_ticket_created', { ticket_type: tipoNombre, priority: prioSel });
+      trackEvent('support_ticket_created', { ticket_type: tipoNombre });
       setTipoSel(tipos[0]?.id || 'funcional');
-      setPrioSel('media');
+      setModulo(MODULOS[0]);
       setTitulo('');
       setDesc('');
     };
 
-    await enviarSoporte(tipoNombre, titulo, desc, prioSel, onSuccess);
+    await enviarSoporte(tipoNombre, titulo, desc, modulo, onSuccess);
   };
 
   const filteredTickets = filterEstado === 'Todos'
@@ -243,23 +247,22 @@ const Soporte = ({ navigation }) => {
               </View>
               )}
 
-              <Text style={[styles.fieldLabel, { color: t.textPrimary, fontSize: text(13) }]}>Prioridad sugerida</Text>
-              <View style={styles.prioRow}>
-                {PRIORIDADES.map(p => (
+              <Text style={[styles.fieldLabel, { color: t.textPrimary, fontSize: text(13) }]}>Donde ocurrio</Text>
+              <View style={styles.chipRow}>
+                {MODULOS.map(m => (
                   <TouchableOpacity
-                    key={p.id}
+                    key={m}
                     style={[
-                      styles.prioCard,
+                      styles.chip,
                       { borderColor: t.border },
-                      prioSel === p.id && { borderColor: p.color, backgroundColor: p.color + '12' },
+                      modulo === m && { backgroundColor: t.accent, borderColor: t.accent },
                     ]}
-                    onPress={() => setPrioSel(p.id)}
+                    onPress={() => setModulo(m)}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.prioText, { color: prioSel === p.id ? p.color : t.textPrimary, fontSize: text(12) }]}>
-                      {p.label}
+                    <Text style={[styles.chipText, { color: modulo === m ? '#fff' : t.textSecondary, fontSize: text(11) }]}>
+                      {m}
                     </Text>
-                    <Text style={[styles.prioDesc, { color: t.textMuted, fontSize: text(9) }]}>{p.desc}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -453,11 +456,6 @@ const styles = StyleSheet.create({
   tipoLabel: { fontWeight: '700' },
   tipoDesc: { marginTop: 2, lineHeight: 13 },
   tipoCheck: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-
-  prioRow: { flexDirection: 'row', gap: 8, marginBottom: 22 },
-  prioCard: { flex: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1.5, alignItems: 'center' },
-  prioText: { fontWeight: '700' },
-  prioDesc: { marginTop: 2, textAlign: 'center', lineHeight: 12 },
 
   input: { borderRadius: 14, borderWidth: 1, padding: 14, minHeight: 48, marginBottom: 22 },
   textarea: { borderRadius: 14, borderWidth: 1, padding: 14, minHeight: 120 },

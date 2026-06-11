@@ -38,7 +38,7 @@ export const validarSoporte = (tipoSel, titulo, desc) => {
     return true;
 };
 
-export const enviarSoporte = async (tipoSel, titulo, desc, prioSel, onSuccess) => {
+export const enviarSoporte = async (tipoSel, titulo, desc, modulo, onSuccess) => {
     const validacionLocal = validarSoporte(tipoSel, titulo, desc);
     if (!validacionLocal) {
         return { ok: false };
@@ -49,8 +49,7 @@ export const enviarSoporte = async (tipoSel, titulo, desc, prioSel, onSuccess) =
             titulo: titulo,
             descripcion: desc,
             tipo: tipoSel,
-            prioridad: prioSel,
-            modulo: 'movil',
+            modulo: modulo,
         });
 
         Alert.alert(
